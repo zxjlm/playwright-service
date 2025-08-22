@@ -1,0 +1,27 @@
+version: "3.3"
+services:
+  playwright-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    ports:
+      - "8001:8000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 6G
+
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:postgres}
+      POSTGRES_DB: ${POSTGRES_DB:playwright_service}
+    restart: always
+    volumes:
+      - ./volumes/db:/var/lib/postgresql/data
