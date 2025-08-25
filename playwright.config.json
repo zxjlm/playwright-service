@@ -1,0 +1,9 @@
+{
+  "headless": true,
+  "port": 9222,
+  "host": "0.0.0.0",
+  "args": [
+    "--disable-dev-shm-usage",
+    "--no-sandbox"
+  ]
+}

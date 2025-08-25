@@ -13,3 +13,6 @@ proxy.py
 data.db
 
 volumes/*
+.vscode/*
+
+docs/*

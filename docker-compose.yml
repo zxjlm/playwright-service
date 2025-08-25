@@ -1,27 +1,55 @@
 version: "3.3"
+x-shared-env: &shared-api-worker-env
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  POSTGRES_DB: ${POSTGRES_DB:-playwright_service}
+  PLAYWRIGHT_BROWSERS_URL: ws://playwright-browser:9222
+
 services:
   playwright-service:
     build:
       context: .
       dockerfile: Dockerfile
-    entrypoint: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    environment:
+      <<: *shared-api-worker-env
+    entrypoint: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8001:8000"
     restart: always
     deploy:
       resources:
         limits:
-          cpus: '3'
+          cpus: "3"
           memory: 6G
+    depends_on:
+      - playwright-browser
+      - db
 
   db:
     image: postgres:16
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:postgres}
-      POSTGRES_DB: ${POSTGRES_DB:playwright_service}
+      <<: *shared-api-worker-env
     restart: always
     volumes:
       - ./volumes/db:/var/lib/postgresql/data
+
+  # playwright-browser:
+  #   image: playwright-chrome:v1.54.0-noble
+  #   ports:
+  #     - "9222:9222"
+  #   command:
+  #     [
+  #       "npx",
+  #       "-y",
+  #       "playwright@1.54.0",
+  #       "run-server",
+  #       "--port",
+  #       "9222",
+  #       "--host",
+  #       "0.0.0.0",
+  #     ]
+  #   volumes:
+  #     - /dev/shm:/dev/shm
+  #     - ./playwright.config.json:/app/playwright.config.json

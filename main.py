@@ -18,12 +18,12 @@ from loguru import logger
 
 
 from get_error import get_error
-from proxy import Proxy
 from utils import clean_html_utils
-from config import browser_context_manager
+from browsers import browser_manager
+from apis.service_router import service_router
 
 app = FastAPI()
-
+app.include_router(service_router, prefix="/service")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,35 +33,17 @@ async def lifespan(app: FastAPI):
     await shutdown_browsers()
 
 
-async def cleanup_browsers():
-
-    while True:
-        await asyncio.sleep(60)  # 每分钟检查一次
-        if (
-            browser_context_manager.last_request_time
-            and datetime.now() - browser_context_manager.last_request_time
-            > timedelta(minutes=10)
-        ):
-            logger.info("No requests for 10 minutes, cleaning up browsers")
-            await shutdown_browsers()
-            break
-
-
 async def shutdown_browsers():
-
+    """Shutdown all browsers"""
     logger.info("Shutting down browsers")
-    if browser_context_manager.chrome_browser:
-        await browser_context_manager.chrome_browser.close()
-        browser_context_manager.chrome_browser = None
-    if browser_context_manager.firefox_browser:
-        await browser_context_manager.firefox_browser.close()
-        browser_context_manager.firefox_browser = None
+    await browser_manager.cleanup_all_browsers()
     logger.info("Browsers shutdown completed")
 
 
 async def create_context(
     browser: Browser, proxy: ProxySettings | None = None
 ) -> BrowserContext:
+    """Create browser context (maintain backward compatibility)"""
     context = await browser.new_context(ignore_https_errors=True, proxy=proxy)
     await context.route(
         "**/*.{png,jpg,jpeg,gif,svg,mp3,mp4,avi,flac,ogg,wav,webm}",

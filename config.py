@@ -30,21 +30,16 @@ if os.path.exists(_env_path) and not load_dotenv(_env_path):
     logger.warning(f"{BASE_DIR} failed to load .env file")
 
 
-class BrowserContextManager:
-    def __init__(self):
-        self.chrome_browser: Browser | None = None
-        self.firefox_browser: Browser | None = None
-        self.last_request_time: datetime | None = None
-        self.cleanup_task: asyncio.Task | None = None
-
-
 class ServiceConfig(BaseSettings):
-    proxy_type: typing.Literal["dynamic", "static", "none"] = Field(default="dynamic")
+    proxy_type: typing.Literal["dynamic", "static", "none"] = Field(default="none")
     proxy_api_url: str | None = Field(default=None)
     proxy_check_url: str | None = Field(default=None)
     static_proxy: str | None = Field(default=None)
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@db:5432/playwright_service"
+    )
+    playwright_browsers_url: str = Field(
+        default="ws://localhost:9222"
     )
 
     model_config = SettingsConfigDict(case_sensitive=False, env_prefix="service_")
@@ -61,6 +56,5 @@ class ServiceConfig(BaseSettings):
         return self
 
 
-browser_context_manager = BrowserContextManager()
 service_config = ServiceConfig()
 engine = create_async_engine(service_config.database_url)

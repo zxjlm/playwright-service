@@ -11,6 +11,7 @@ All Rights Reserved.
 """
 
 import asyncio
+import json
 import time
 from datetime import datetime
 from typing import Literal
@@ -29,7 +30,6 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 
 from get_error import get_error
-from main import cleanup_browsers, create_context
 from base_proxy import ProxyManager
 from models.request_history_model import RequestHistoryModel
 from schemas.service_schema import (
@@ -38,9 +38,11 @@ from schemas.service_schema import (
     HtmlResponse,
     UrlInput,
 )
-from config import browser_context_manager
+from config import service_config
+from browsers import browser_manager
 from utils import clean_html_utils
 from apis.deps import SessionDep
+
 
 service_router = APIRouter()
 
@@ -49,38 +51,9 @@ max_concurrent_requests = 10
 request_semaphore = asyncio.Semaphore(max_concurrent_requests)
 
 
-async def ensure_browsers(browser_type: Literal["chrome", "firefox"]):
-
-    if not browser_context_manager.chrome_browser and browser_type == "chrome":
-        logger.info("Initializing chrome browser")
-        playwright = await async_playwright().start()
-        browser_context_manager.chrome_browser = await playwright.chromium.launch(
-            headless=True
-        )
-        logger.info("Chrome browser initialized successfully")
-        if (
-            browser_context_manager.cleanup_task is None
-            or browser_context_manager.cleanup_task.done()
-        ):
-            logger.info("Starting cleanup task for chrome browser")
-            browser_context_manager.cleanup_task = asyncio.create_task(
-                cleanup_browsers()
-            )
-    elif not browser_context_manager.firefox_browser and browser_type == "firefox":
-        logger.info("Initializing firefox browser")
-        playwright = await async_playwright().start()
-        browser_context_manager.firefox_browser = await playwright.firefox.launch(
-            headless=True
-        )
-        logger.info("Firefox browser initialized successfully")
-        if (
-            browser_context_manager.cleanup_task is None
-            or browser_context_manager.cleanup_task.done()
-        ):
-            logger.info("Starting cleanup task")
-            browser_context_manager.cleanup_task = asyncio.create_task(
-                cleanup_browsers()
-            )
+async def ensure_browsers(browser_type: str):
+    """Ensure browser is initialized (maintain backward compatibility)"""
+    await browser_manager.get_browser(browser_type, headless=True)
 
 
 @service_router.post("/html")
@@ -97,13 +70,14 @@ async def get_html(url_input: UrlInput, session: SessionDep):
     Returns:
         HTML content from the URL
     """
+    from main import create_context
 
     status_code = 0
     response_time = 0
     response_headers = ""
     response_body = ""
     request_headers = ""
-    request_body = ""
+    request_body = url_input.model_dump_json()
     result = None
 
     try:
@@ -120,16 +94,11 @@ async def get_html(url_input: UrlInput, session: SessionDep):
             logger.info(
                 f"Received request for URL: {url_input.url} using browser: {url_input.browser_type}"
             )
-            await ensure_browsers(url_input.browser_type)
-            browser_context_manager.last_request_time = datetime.now()
-            browser = (
-                browser_context_manager.chrome_browser
-                if url_input.browser_type == "chrome"
-                else browser_context_manager.firefox_browser
-            )
-
-            context = await create_context(browser, proxy_item)
-            page: Page = await context.new_page()
+            
+            # Use new browser manager
+            browser_instance = await browser_manager.get_browser(url_input.browser_type, headless=True)
+            context = await browser_instance.create_context(proxy_item)
+            page: Page = await browser_instance.create_page(context)
 
             start_time = time.perf_counter()
 
@@ -149,8 +118,12 @@ async def get_html(url_input: UrlInput, session: SessionDep):
                 logger.debug(f"Page loaded, waiting for 5 seconds: {url_input.url}")
                 await asyncio.sleep(2)
 
-                html = await page.content()
+                response_body = html = await page.content()
                 logger.debug(f"Page closed successfully: {url_input.url}")
+
+                response_headers = json.dumps(response.headers)
+                request_headers = json.dumps(response.request.headers)
+
                 result = HtmlResponse(
                     html=html,
                     page_status_code=response.status,
@@ -207,6 +180,7 @@ async def get_html(url_input: UrlInput, session: SessionDep):
     finally:
         await RequestHistoryModel.create_request_history(
             url=url_input.url,
+            browser_type=url_input.browser_type,
             status_code=status_code,
             response_time=response_time,
             response_headers=response_headers,
@@ -238,27 +212,39 @@ async def clean_html(clean_html_input: CleanHtmlInput):
     return CleanHtmlResponse(html=clean_text)
 
 
+@service_router.get("/browsers/{browser_type}/info")
+async def get_browser_info(browser_type: str):
+    """Get browser information"""
+    if browser_manager.is_browser_available(browser_type):
+        return JSONResponse(
+            content={"status": f"{browser_type} Service Available"}, status_code=200
+        )
+    else:
+        return JSONResponse(
+            content={"status": f"{browser_type} Service Unavailable"}, status_code=503
+        )
+
+@service_router.get("/browsers/supported")
+async def get_supported_browsers():
+    """Get list of supported browsers"""
+    return JSONResponse(
+        content={"browsers": browser_manager.get_supported_browsers()}, status_code=200
+    )
+        
 @service_router.get("/health/liveness")
 def liveness_probe():
     return JSONResponse(content={"status": "ok"}, status_code=200)
 
 
 @service_router.get("/health/readiness")
-async def readiness_probe(browser_type: Literal["chrome", "firefox"]):
-    if browser_type == "chrome":
-        if browser_context_manager.chrome_browser:
-            return JSONResponse(content={"status": "ok"}, status_code=200)
-        else:
-            return JSONResponse(
-                content={"status": "Chrome Service Unavailable"}, status_code=503
-            )
+async def readiness_probe(browser_type: str):
+    """Health check"""
+    if browser_manager.is_browser_available(browser_type):
+        return JSONResponse(content={"status": "ok"}, status_code=200)
     else:
-        if browser_context_manager.firefox_browser:
-            return JSONResponse(content={"status": "ok"}, status_code=200)
-        else:
-            return JSONResponse(
-                content={"status": "Firefox Service Unavailable"}, status_code=503
-            )
+        return JSONResponse(
+            content={"status": f"{browser_type} Service Unavailable"}, status_code=503
+        )
 
 
 def get_waiting_requests() -> int:

@@ -21,7 +21,7 @@ import urllib3
 from config import service_config
 
 
-# 可用代理类型
+# Available proxy types
 IS_ADVANCED_URLLIB3 = (
     int(urllib3.__version__.split(".")[1]) >= 26 or int(urllib3.__version__.split(".")[0]) >= 2  # type: ignore
 )
@@ -94,7 +94,7 @@ class ProxyManager(BaseProxy):
 
     async def check_proxy(self, proxy: str) -> bool:
         """
-        check proxy
+        Check proxy
         :param proxy:
         :return:
         """

@@ -1,12 +1,12 @@
 # Playwright Service
 
-这是一个基于 **FastAPI** 和 **Playwright** 的Web服务，用于获取网页的HTML内容。该服务支持使用Chrome和Firefox浏览器进行页面访问，并提供了自动的浏览器资源管理功能。
+This is a web service based on **FastAPI** and **Playwright** for retrieving HTML content from web pages. The service supports using Chrome and Firefox browsers for page access and provides automatic browser resource management functionality.
 
-## 主要功能
+## Main Features
 
-- 支持Chrome和Firefox双浏览器引擎
-- 自动管理浏览器资源，闲置10分钟后自动清理
-- 支持自定义请求头
-- 屏蔽图片、音视频等媒体资源加载，提高性能
-- 提供健康检查接口
-- 返回页面状态码和对应的错误信息
+- Supports dual browser engines (Chrome and Firefox)
+- Automatic browser resource management, auto-cleanup after 10 minutes of idle time
+- Supports custom request headers
+- Blocks image, audio, video and other media resource loading to improve performance
+- Provides health check interfaces
+- Returns page status codes and corresponding error messages

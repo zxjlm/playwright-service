@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 
-async def create_session() -> async_sessionmaker[AsyncSession]:
+def create_session() -> async_sessionmaker[AsyncSession]:
     """
     get session
     """
