@@ -17,7 +17,9 @@ from pydantic import BaseModel, Field, HttpUrl
 
 class UrlInput(BaseModel):
     url: HttpUrl
-    browser_type: typing.Literal["chrome", "firefox", "webkit"] = Field(default="chrome")
+    browser_type: typing.Literal["chrome", "firefox", "webkit"] = Field(
+        default="chrome"
+    )
     headers: dict = Field(default_factory=dict)
     timeout: int = Field(default=10000, ge=1000, le=100000)
     wait_until: typing.Literal["domcontentloaded", "networkidle", "load", "commit"] = (
@@ -36,6 +38,12 @@ class CleanHtmlInput(BaseModel):
 
 class HtmlResponse(BaseModel):
     html: str
+    page_status_code: typing.Union[int, str]
+    page_error: str
+
+
+class MarkdownResponse(BaseModel):
+    markdown: str
     page_status_code: typing.Union[int, str]
     page_error: str
 

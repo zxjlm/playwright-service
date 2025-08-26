@@ -12,6 +12,7 @@ services:
       dockerfile: Dockerfile
     environment:
       <<: *shared-api-worker-env
+      SERVICE_DATABASE_URL: ${SERVICE_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/playwright_service}
     entrypoint: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8001:8000"
@@ -22,7 +23,7 @@ services:
           cpus: "3"
           memory: 6G
     depends_on:
-      - playwright-browser
+      # - playwright-browser
       - db
 
   db:

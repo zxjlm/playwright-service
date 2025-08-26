@@ -11,7 +11,7 @@ All Rights Reserved.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+from typing import Optional
 from playwright.async_api import Browser, BrowserContext, Page, ProxySettings
 from loguru import logger
 

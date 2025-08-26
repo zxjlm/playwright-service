@@ -10,8 +10,6 @@
 All Rights Reserved.
 """
 from fastapi import APIRouter
-from playwright.async_api import async_playwright
-from config import service_config
 
 
 manager_router = APIRouter(prefix="/management", tags=["management"])

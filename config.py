@@ -12,19 +12,17 @@ All Rights Reserved.
 
 
 import asyncio
-from datetime import datetime
 import os
 import typing
 from dotenv import load_dotenv
 from pathlib import Path
 from loguru import logger
-from playwright.async_api import Browser
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import create_async_engine
 
 
-BASE_DIR = Path(__file__).parent.parent
+BASE_DIR = Path(__file__).parent
 _env_path = os.path.join(BASE_DIR, ".env")
 if os.path.exists(_env_path) and not load_dotenv(_env_path):
     logger.warning(f"{BASE_DIR} failed to load .env file")
@@ -38,9 +36,8 @@ class ServiceConfig(BaseSettings):
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@db:5432/playwright_service"
     )
-    playwright_browsers_url: str = Field(
-        default="ws://localhost:9222"
-    )
+    playwright_browsers_url: str = Field(default="ws://localhost:9222")
+    max_concurrent_requests: int = Field(default=10)
 
     model_config = SettingsConfigDict(case_sensitive=False, env_prefix="service_")
 
@@ -58,3 +55,4 @@ class ServiceConfig(BaseSettings):
 
 service_config = ServiceConfig()
 engine = create_async_engine(service_config.database_url)
+request_semaphore = asyncio.Semaphore(service_config.max_concurrent_requests)

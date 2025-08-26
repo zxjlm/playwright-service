@@ -1,29 +1,25 @@
 from contextlib import asynccontextmanager
-from html import parser
-from typing import Literal
-import typing
 from fastapi import FastAPI
 from playwright.async_api import (
-    async_playwright,
     Browser,
     BrowserContext,
-    Page,
-    TimeoutError as PWTimeoutError,
     ProxySettings,
 )
-import asyncio
-from pydantic import BaseModel, HttpUrl, Field
-from datetime import datetime, timedelta
 from loguru import logger
+from fastapi_mcp import FastApiMCP
 
-
-from get_error import get_error
-from utils import clean_html_utils
 from browsers import browser_manager
 from apis.service_router import service_router
+from apis.mcp_router import mcp_router
 
 app = FastAPI()
-app.include_router(service_router, prefix="/service")
+
+mcp = FastApiMCP(app)
+
+app.include_router(service_router)
+
+mcp.mount_http(mcp_router)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -1,25 +1,37 @@
 version: "3.3"
+x-shared-env: &shared-api-worker-env
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  POSTGRES_DB: ${POSTGRES_DB:-playwright_service}
+  PLAYWRIGHT_BROWSERS_URL: ws://playwright-browser:9222
+
 services:
   playwright-service:
-    image: ${SERVICE_IMAGE_NAME}:latest
-    entrypoint: [ "gunicorn", "main:app", "--host", "0.0.0.0", "--port", "8000" ]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      <<: *shared-api-worker-env
+      SERVICE_DATABASE_URL: ${SERVICE_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/playwright_service}
+    entrypoint: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     ports:
       - "8001:8000"
     restart: always
     deploy:
       resources:
         limits:
-          cpus: '3'
+          cpus: "3"
           memory: 6G
+    depends_on:
+      # - playwright-browser
+      - db
 
   db:
     image: postgres:16
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:postgres}
-      POSTGRES_DB: ${POSTGRES_DB:playwright_service}
+      <<: *shared-api-worker-env
     restart: always
     volumes:
       - ./volumes/db:/var/lib/postgresql/data

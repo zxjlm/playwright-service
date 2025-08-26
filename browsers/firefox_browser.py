@@ -12,7 +12,6 @@ All Rights Reserved.
 
 from typing import Optional
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page, ProxySettings
-from loguru import logger
 
 from .base_browser import BaseBrowser
 

@@ -10,7 +10,7 @@
 All Rights Reserved.
 """
 
-from typing import Dict, Type, Literal
+from typing import Dict, Type
 from loguru import logger
 
 from .base_browser import BaseBrowser
