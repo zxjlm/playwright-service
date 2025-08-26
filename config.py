@@ -43,6 +43,11 @@ class ServiceConfig(BaseSettings):
 
     @model_validator(mode="after")
     def check_proxy_fields(self):
+        if self.proxy_api_url and self.proxy_type == "none":
+            logger.warning(
+                "proxy_type is none, which will cause proxy_api_url is not used"
+            )
+
         proxy_type = self.proxy_type
         proxy_api_url = self.proxy_api_url
         static_proxy = self.static_proxy

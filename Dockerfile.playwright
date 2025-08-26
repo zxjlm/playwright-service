@@ -1,5 +1,5 @@
-FROM mcr.microsoft.com/playwright:v1.54.0-noble
+FROM mcr.microsoft.com/playwright/python:v1.54.0-noble
 
-RUN npx -y playwright@1.54.0 install
+RUN pip install --no-cache-dir uv -i https://mirrors.aliyun.com/pypi/simple/
 
-CMD ["npx", "-y", "playwright@1.54.0", "run-server", "--port", "3000", "--host", "0.0.0.0"]
+CMD ["sleep", "infinity"]

@@ -10,9 +10,11 @@
 All Rights Reserved.
 """
 import asyncio
+import hashlib
 import json
 import time
 from loguru import logger
+from sqlmodel import select
 from playwright.async_api import (
     Page,
     TimeoutError as PWTimeoutError,
@@ -35,13 +37,24 @@ def get_waiting_requests() -> int:
 
 
 async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
-    status_code = 0
     response_time = 0
     response_headers = ""
     response_body = ""
     request_headers = ""
     request_body = url_input.model_dump_json()
-    result = None
+    result = HtmlResponse(html="", page_status_code=-1, page_error="")
+
+    if url_input.use_cache:
+        request_history = await RequestHistoryModel.get_request_history(
+            url_input.url, url_input.browser_type, session
+        )
+        if request_history:
+            return HtmlResponse(
+                html=request_history.response_body,
+                page_status_code=request_history.status_code,
+                page_error="",
+                cache_hit=1,
+            )
 
     try:
         waiting_requests = get_waiting_requests()
@@ -146,7 +159,7 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
         await RequestHistoryModel.create_request_history(
             url=url_input.url,
             browser_type=url_input.browser_type,
-            status_code=status_code,
+            status_code=result.page_status_code,
             response_time=response_time,
             response_headers=response_headers,
             response_body=response_body,

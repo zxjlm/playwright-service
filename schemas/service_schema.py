@@ -25,10 +25,20 @@ class UrlInput(BaseModel):
     wait_until: typing.Literal["domcontentloaded", "networkidle", "load", "commit"] = (
         Field(default="domcontentloaded")
     )
-    is_force_get_content: bool = Field(default=False, description="")
+    is_force_get_content: bool = Field(
+        default=False,
+        description="force get content from url, ignore the error of wait_until",
+    )
+    use_cache: bool = Field(
+        default=True, description="use cache to get content from url"
+    )
     # need_proxy: bool = Field(
     #     default=False, description=""
     # )  # ATT: switch proxy will reduce context performance
+
+
+class MarkdownInput(UrlInput):
+    parser: typing.Literal["html2text", "markdownify"] = Field(default="html2text")
 
 
 class CleanHtmlInput(BaseModel):
@@ -40,12 +50,14 @@ class HtmlResponse(BaseModel):
     html: str
     page_status_code: typing.Union[int, str]
     page_error: str
+    cache_hit: int = Field(default=0)
 
 
 class MarkdownResponse(BaseModel):
     markdown: str
     page_status_code: typing.Union[int, str]
     page_error: str
+    cache_hit: int = Field(default=0)
 
 
 class CleanHtmlResponse(BaseModel):

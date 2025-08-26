@@ -11,10 +11,18 @@ All Rights Reserved.
 """
 import io
 from fastapi import APIRouter
-from markitdown import MarkItDown
+
+# from markitdown import MarkItDown
+import html2text
+import markdownify
 
 from apis.utils import get_html_base
-from schemas.service_schema import UrlInput, HtmlResponse, MarkdownResponse
+from schemas.service_schema import (
+    MarkdownInput,
+    UrlInput,
+    HtmlResponse,
+    MarkdownResponse,
+)
 from apis.deps import SessionDep
 
 mcp_router = APIRouter(prefix="/mcp", tags=["mcp"])
@@ -33,15 +41,31 @@ async def get_html(url_input: UrlInput, session: SessionDep):
     operation_id="playwright_service:get_markdown",
     response_model=MarkdownResponse,
 )
-async def get_markdown(url_input: UrlInput, session: SessionDep):
-    result = await get_html_base(url_input, session)
-    md = MarkItDown(enable_plugins=False)  # Set to True to enable plugins
-    html_bytes = result.html.encode("utf-8")
-    html_file_like = io.BytesIO(html_bytes)
-    markdown_result = md.convert_stream(html_file_like, file_extension=".html")
+async def get_markdown(markdown_input: MarkdownInput, session: SessionDep):
+    result = await get_html_base(markdown_input, session)
+
+    # base on markitdown
+    # md = MarkItDown(enable_plugins=False)  # Set to True to enable plugins
+    # html_bytes = result.html.encode("utf-8")
+    # html_file_like = io.BytesIO(html_bytes)
+    # markdown_result = md.convert_stream(html_file_like, file_extension=".html")
+
+    # base on html2text
+    if markdown_input.parser == "html2text":
+        h = html2text.HTML2Text()
+        markdown_result = h.handle(result.html)
+
+    # base on markdownify
+    elif markdown_input.parser == "markdownify":
+        markdown_result = markdownify.markdownify(result.html)
+
+    else:
+        markdown_result = result.html
+
     result = MarkdownResponse(
-        markdown=markdown_result.text_content,
+        markdown=markdown_result,
         page_status_code=result.page_status_code,
         page_error=result.page_error,
+        cache_hit=result.cache_hit,
     )
     return result

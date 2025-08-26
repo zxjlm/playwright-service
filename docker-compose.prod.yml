@@ -1,4 +1,3 @@
-version: "3.3"
 x-shared-env: &shared-api-worker-env
   POSTGRES_USER: ${POSTGRES_USER:-postgres}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -13,7 +12,7 @@ services:
     environment:
       <<: *shared-api-worker-env
       SERVICE_DATABASE_URL: ${SERVICE_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/playwright_service}
-    entrypoint: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+    entrypoint: ["/bin/bash", "scripts/start_service.sh"]
     ports:
       - "8001:8000"
     restart: always
@@ -29,7 +28,7 @@ services:
   db:
     image: postgres:16
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       <<: *shared-api-worker-env
     restart: always

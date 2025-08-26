@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -66,9 +67,10 @@ async def run_async_migrations() -> None:
     and associate a connection with the context.
 
     """
-
+    configuration = config.get_section(config.config_ini_section) or {}
+    configuration["sqlalchemy.url"] = os.getenv("SERVICE_DATABASE_URL")
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

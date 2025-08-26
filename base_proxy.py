@@ -52,11 +52,13 @@ class ProxyManager(BaseProxy):
 
     async def get_proxy(self) -> None | str:
         if self.proxy_type == "dynamic":
-            return await self.get_api()
+            proxy = await self.get_api()
         elif self.proxy_type == "static":
-            return self.static_proxy  # type: ignore
+            proxy = self.static_proxy  # type: ignore
         else:
-            return None
+            proxy = None
+        logger.info(f"get proxy: {proxy}")
+        return proxy
 
     async def get_api(self) -> str:
         url = self.proxy_url

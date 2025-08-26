@@ -16,3 +16,6 @@ volumes/*
 .vscode/*
 
 docs/*
+tmp.md
+
+docker-compose.override.yml

@@ -11,10 +11,10 @@ All Rights Reserved.
 """
 
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import hashlib
 from pydantic import HttpUrl
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -34,6 +34,25 @@ class RequestHistoryModel(SQLModel, table=True):
     updated_at: datetime = Field(default=datetime.now())
 
     @classmethod
+    async def get_hashed_url(cls, url: HttpUrl):
+        return hashlib.sha256(str(url).encode()).hexdigest()
+
+    @classmethod
+    async def get_request_history(
+        cls, url: HttpUrl, browser_type: str, session: AsyncSession
+    ):
+        url_hash = await cls.get_hashed_url(url)
+        result = await session.exec(
+            select(RequestHistoryModel).where(
+                RequestHistoryModel.url_hash == url_hash,
+                RequestHistoryModel.status_code == 200,
+                RequestHistoryModel.browser_type == browser_type,
+                RequestHistoryModel.created_at > datetime.now() - timedelta(days=1),
+            )
+        )
+        return result.first()
+
+    @classmethod
     async def create_request_history(
         cls,
         url: HttpUrl,
@@ -49,9 +68,9 @@ class RequestHistoryModel(SQLModel, table=True):
         """
         create request history
         """
-        cls_ins = cls()
+        cls_ins = cls()  # type: ignore
         cls_ins.url = str(url)
-        cls_ins.url_hash = hashlib.sha256(str(url).encode()).hexdigest()
+        cls_ins.url_hash = await cls.get_hashed_url(url)
         cls_ins.browser_type = browser_type
         cls_ins.status_code = status_code
         cls_ins.response_time = response_time

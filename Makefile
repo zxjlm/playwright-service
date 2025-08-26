@@ -1,6 +1,9 @@
 docker-build-chrome:
 	docker build -t playwright-py:v1.54.0-noble -f Dockerfile.playwright .
 
+docker-build-uv-pr-image:
+	docker build -t playwright-py-uv:v1.54.0-noble -f Dockerfile.playwright .
+
 start-inspector:
 	npx @modelcontextprotocol/inspector \
 	uv \
