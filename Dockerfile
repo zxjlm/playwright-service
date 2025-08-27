@@ -1,9 +1,11 @@
-FROM playwright-py-uv:v1.54.0-noble
+FROM mcr.microsoft.com/playwright/python:v1.54.0-noble
 # build from Dockerfile.playwright
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN pip install --no-cache-dir uv -i https://mirrors.aliyun.com/pypi/simple/
 
 WORKDIR /app
 COPY ./pyproject.toml ./uv.lock  /app/
