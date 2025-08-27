@@ -55,7 +55,7 @@ A web scraping service built with **FastAPI**, **PostgreSQL**, **fastapi-mcp**, 
 
 ### Prerequisites
 - Docker and Docker Compose
-- At least 6GB RAM available for the service
+- Recommend at least 6GB RAM available for the service
 
 ### Installation & Startup
 
