@@ -144,19 +144,24 @@ uv run ruff check .
 
 ## 🔮 Future Roadmap
 
-### Phase 1: Frontend Dashboard
+### Phase 1: Auth
+- **Bearer auth**
+- **Oauth**
+- **Custom auth plugin**
+
+### Phase 2: Frontend Dashboard
 - **Web Interface**: Create a comprehensive frontend dashboard
 - **Request History Visualization**: Display cached requests and performance metrics
 - **Real-time Monitoring**: Live monitoring of service performance
 - **Configuration Management**: Web-based configuration interface
 
-### Phase 2: Performance Optimization
+### Phase 3: Performance Optimization
 - **Request Queuing**: Advanced request queuing and prioritization
 - **Load Balancing**: Multi-instance deployment support
 - **Caching Strategies**: Redis integration for enhanced caching
 - **Resource Optimization**: Memory and CPU usage optimization
 
-### Phase 3: Enhanced HTML Processing
+### Phase 4: Enhanced HTML Processing
 - **Custom Plugins**: Support for custom HTML compression plugins
 - **Markdown Parser Optimization**: Improved HTML-to-Markdown conversion
 - **Content Extraction**: Advanced content extraction algorithms

@@ -9,13 +9,13 @@
 @Description: ...
 All Rights Reserved.
 """
-import io
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
 # from markitdown import MarkItDown
 import html2text
 import markdownify
 
+from apis.auth_utils import verify_bearauth
 from apis.utils import get_html_base
 from schemas.service_schema import (
     MarkdownInput,
@@ -29,7 +29,10 @@ mcp_router = APIRouter(prefix="/mcp", tags=["mcp"])
 
 
 @mcp_router.post(
-    "/html", operation_id="playwright_service:get_html", response_model=HtmlResponse
+    "/html",
+    operation_id="playwright_service:get_html",
+    response_model=HtmlResponse,
+    # dependencies=[Depends(verify_bearauth)],
 )
 async def get_html(url_input: UrlInput, session: SessionDep):
     result = await get_html_base(url_input, session)
@@ -40,6 +43,7 @@ async def get_html(url_input: UrlInput, session: SessionDep):
     "/markdown",
     operation_id="playwright_service:get_markdown",
     response_model=MarkdownResponse,
+    # dependencies=[Depends(verify_bearauth)],
 )
 async def get_markdown(markdown_input: MarkdownInput, session: SessionDep):
     result = await get_html_base(markdown_input, session)

@@ -38,6 +38,7 @@ class ServiceConfig(BaseSettings):
     )
     playwright_browsers_url: str = Field(default="ws://localhost:9222")
     max_concurrent_requests: int = Field(default=10)
+    mcp_bearer_token: str = Field(default="")
 
     model_config = SettingsConfigDict(case_sensitive=False, env_prefix="service_")
 
