@@ -6,9 +6,7 @@ x-shared-env: &shared-api-worker-env
 
 services:
   playwright-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: harumoniac/playwright-service:latest
     environment:
       <<: *shared-api-worker-env
       SERVICE_DATABASE_URL: ${SERVICE_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/playwright_service}
@@ -24,6 +22,13 @@ services:
     depends_on:
       # - playwright-browser
       - db
+    volumes:
+      - ./volumes/logs:/var/log/pr-service
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   db:
     image: postgres:16

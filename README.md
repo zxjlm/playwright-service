@@ -11,6 +11,15 @@ A web scraping service built with **FastAPI**, **PostgreSQL**, **fastapi-mcp**, 
 - **SQLModel** - SQL database in Python, designed for simplicity and compatibility
 - **Alembic** - Database migration tool
 
+## 👀 Preview
+
+![openapi](./statics/openapi.png)
+
+![inspector](./statics/inspector.png)
+
+![dify](./statics/dify.png)
+
+
 ## ✨ Key Features
 
 ### 🔄 Proxy Support
@@ -26,16 +35,12 @@ A web scraping service built with **FastAPI**, **PostgreSQL**, **fastapi-mcp**, 
 - **Database Storage**: Persistent cache storage in PostgreSQL
 
 ### 🌐 Multi-Browser Support
-- **Chrome**: Full Chrome browser automation
-- **Firefox**: Complete Firefox browser support
-- **Safari**: WebKit-based browser automation
+- **Based on playwright browser support**: chrome, firefox, webkit
 - **Resource Optimization**: Automatic blocking of media resources (images, videos, audio) for improved performance
 
 ### 📝 HTML to Markdown Conversion
 - **Multiple Parsers**: Support for `html2text` and `markdownify` libraries
-- **Configurable Output**: Choose your preferred markdown conversion method
-- **Clean Content**: Optimized HTML processing for better markdown output
-- **Flexible Integration**: Easy integration with content processing pipelines
+- **Content Cleaning**: Optimized HTML processing for better markdown output
 
 ## 🎯 Use Cases
 
@@ -43,13 +48,13 @@ A web scraping service built with **FastAPI**, **PostgreSQL**, **fastapi-mcp**, 
 - **Web Scraping**: Extract content from dynamic websites
 - **Content Monitoring**: Track changes in web pages over time
 - **Data Collection**: Gather structured data from various web sources
-- **Performance Testing**: Measure page load times and performance metrics
 
 ### MCP (Model Context Protocol) Integration
-- **AI Tool Connectivity**: Seamless integration with AI models and tools
+- **AI Tool Connectivity**: Seamless integration with AI models and tools (such as dify configuration)
 - **Automated Web Research**: Enable AI agents to browse and analyze web content
 - **Content Processing**: Convert web content to markdown for AI consumption
 - **Scalable Architecture**: Handle multiple concurrent requests efficiently
+
 
 ## 🚀 Quick Start
 
@@ -57,23 +62,30 @@ A web scraping service built with **FastAPI**, **PostgreSQL**, **fastapi-mcp**, 
 - Docker and Docker Compose
 - Recommend at least 6GB RAM available for the service
 
-### Installation & Startup
+### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone git@github.com:zxjlm/playwright-service.git
    cd playwright-service
    ```
 
 2. **Start the service**
    ```bash
-   docker compose up -d
+   docker compose -f docker-compose.prod.yml up -d
    ```
 
 3. **Access the service**
    - API Documentation: http://localhost:8001/docs
    - Health Check: http://localhost:8001/health
    - MCP Endpoints: http://localhost:8001/mcp/
+
+3.1 **Or use inspector**
+
+   ```bash
+   make start-inspector
+   ```
+
 
 ### Environment Configuration
 
@@ -93,17 +105,13 @@ PROXY_CHECK_URL=http://httpbin.org/ip
 STATIC_PROXY=http://127.0.0.1:8080
 ```
 
-## 📊 API Endpoints
+### About PROXY_API_URL
 
-### Core Service Endpoints
-- `POST /html` - Retrieve HTML content from URLs
-- `POST /markdown` - Convert web pages to markdown format
-- `GET /health` - Service health check
-- `GET /management/stats` - Service statistics
+The proxy used in this project will be applied to Playwright service requests. 
+For dynamic proxies, they must be provided in the form of a URL, and it supports obtaining a proxy address in the format of http://127.0.0.1:7890 via the GET method. 
+For static proxies, the provided proxy in the format of http://127.0.0.1:7890 will be directly applied to the service requests. Please ensure that the static proxy is available for a long period. 
+Note that if a proxy is configured, the PROXY_TYPE must be specified to declare the type of proxy.
 
-### MCP Endpoints
-- `POST /mcp/html` - MCP-compatible HTML retrieval
-- `POST /mcp/markdown` - MCP-compatible markdown conversion
 
 ## 🔧 Configuration Options
 
@@ -173,15 +181,5 @@ We welcome contributions! Please feel free to submit issues and pull requests.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU GENERAL PUBLIC LICENSE - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the API documentation at `/docs`
-- Review the health check endpoint at `/health`
-
----
-
-**Built with ❤️ using FastAPI, Playwright, and modern web technologies**

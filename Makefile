@@ -10,4 +10,12 @@ start-inspector:
 	--directory . \
 	run \
 	playwright-service \
+	--host 0.0.0.0 --port 8001
+
+start-inspector-dev:
+	npx @modelcontextprotocol/inspector \
+	uv \
+	--directory . \
+	run \
+	playwright-service \
 	--host 0.0.0.0 --port 8000

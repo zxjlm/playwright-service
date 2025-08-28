@@ -143,10 +143,10 @@ threads = 2
 #       A string of "debug", "info", "warning", "error", "critical"
 #
 
-# errorlog = '-'
-# loglevel = "info"
-# accesslog = '-'
-# access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
+errorlog = "/var/log/pr-service/error.log"
+loglevel = "info"
+accesslog = "/var/log/pr-service/access.log"
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 # logconfig = "log.ini"
 
 #

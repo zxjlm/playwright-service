@@ -6,3 +6,4 @@ test_data
 .ruff_cache
 volumnes
 proxy.py
+statics
