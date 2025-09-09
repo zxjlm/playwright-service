@@ -24,6 +24,7 @@ from schemas.service_schema import (
     MarkdownResponse,
 )
 from apis.deps import SessionDep
+from utils import clean_html_utils
 
 mcp_router = APIRouter(prefix="/mcp", tags=["mcp"])
 
@@ -53,6 +54,9 @@ async def get_markdown(markdown_input: MarkdownInput, session: SessionDep):
     # html_bytes = result.html.encode("utf-8")
     # html_file_like = io.BytesIO(html_bytes)
     # markdown_result = md.convert_stream(html_file_like, file_extension=".html")
+
+    # pre clean html
+    result.html = clean_html_utils(result.html)
 
     # base on html2text
     if markdown_input.parser == "html2text":

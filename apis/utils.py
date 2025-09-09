@@ -12,6 +12,7 @@ All Rights Reserved.
 import asyncio
 import hashlib
 import json
+import re
 import time
 from loguru import logger
 from sqlmodel import select
@@ -27,6 +28,7 @@ from schemas.service_schema import UrlInput
 from models.request_history_model import RequestHistoryModel
 from config import request_semaphore
 from browsers import browser_manager
+from bs4 import BeautifulSoup
 
 
 def get_waiting_requests() -> int:

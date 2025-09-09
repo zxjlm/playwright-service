@@ -25,12 +25,13 @@ class UrlInput(BaseModel):
     wait_until: typing.Literal["domcontentloaded", "networkidle", "load", "commit"] = (
         Field(default="domcontentloaded")
     )
-    is_force_get_content: bool = Field(
-        default=False,
+    is_force_get_content: int = Field(
+        default=0,
         description="force get content from url, ignore the error of wait_until",
     )
-    use_cache: bool = Field(
-        default=True, description="use cache to get content from url"
+    use_cache: int = Field(default=1, description="use cache to get content from url")
+    use_force_html_clean: int = Field(
+        default=0, description="force clean html, may cause content loss"
     )
     # need_proxy: bool = Field(
     #     default=False, description=""
