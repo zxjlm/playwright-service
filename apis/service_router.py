@@ -69,7 +69,7 @@ async def clean_html(clean_html_input: CleanHtmlInput):
     """
 
     if not clean_html_input.html:
-        return clean_html_input.html
+        return CleanHtmlResponse(html=clean_html_input.html)
     clean_text = clean_html_utils(clean_html_input.html, clean_html_input.parser)
     return CleanHtmlResponse(html=clean_text)
 
