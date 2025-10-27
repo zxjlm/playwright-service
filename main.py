@@ -1,19 +1,11 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
-from fastapi.security import HTTPBearer
-from fastapi_mcp import FastApiMCP, AuthConfig
-from playwright.async_api import (
-    Browser,
-    BrowserContext,
-    ProxySettings,
-)
-from loguru import logger
+from fastapi import FastAPI
 from fastapi_mcp import FastApiMCP
+from loguru import logger
 
 from browsers import browser_manager
 from apis.service_router import service_router
 from apis.mcp_router import mcp_router
-from apis.auth_utils import token_auth_scheme
 
 
 @asynccontextmanager

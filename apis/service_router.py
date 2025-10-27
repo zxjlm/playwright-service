@@ -15,10 +15,13 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 
-from apis.utils import get_html_base
+from apis.utils import get_html_base, get_html_screenshot
 from schemas.service_schema import (
     CleanHtmlInput,
     CleanHtmlResponse,
+    HtmlResponse,
+    ScreenshotInput,
+    ScreenshotResponse,
     UrlInput,
 )
 from browsers import browser_manager
@@ -34,7 +37,7 @@ async def ensure_browsers(browser_type: str):
     await browser_manager.get_browser(browser_type, headless=True)
 
 
-@service_router.post("/html")
+@service_router.post("/html", response_model=HtmlResponse)
 async def get_html(url_input: UrlInput, session: SessionDep):
     """
     Get HTML content from a URL.
@@ -106,3 +109,11 @@ async def readiness_probe(browser_type: str):
         return JSONResponse(
             content={"status": f"{browser_type} Service Unavailable"}, status_code=503
         )
+
+
+@service_router.post("/screenshot", response_model=ScreenshotResponse)
+async def get_screenshot(screenshot_input: ScreenshotInput, session: SessionDep):
+    """Get screenshot of a URL"""
+
+    result = await get_html_screenshot(screenshot_input, session)
+    return result

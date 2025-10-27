@@ -9,13 +9,12 @@
 @Description: ...
 All Rights Reserved.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
 # from markitdown import MarkItDown
 import html2text
 import markdownify
 
-from apis.auth_utils import verify_bearauth
 from apis.utils import get_html_base
 from schemas.service_schema import (
     MarkdownInput,
