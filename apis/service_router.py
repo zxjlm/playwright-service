@@ -11,7 +11,7 @@ All Rights Reserved.
 """
 
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 
@@ -26,7 +26,7 @@ from schemas.service_schema import (
 )
 from browsers import browser_manager
 from utils import clean_html_utils
-from apis.deps import SessionDep
+from apis.deps import SessionDep, verify_auth_key
 
 
 service_router = APIRouter(prefix="/service", tags=["service"])
@@ -37,7 +37,11 @@ async def ensure_browsers(browser_type: str):
     await browser_manager.get_browser(browser_type, headless=True)
 
 
-@service_router.post("/html", response_model=HtmlResponse)
+@service_router.post(
+    "/html",
+    response_model=HtmlResponse,
+    dependencies=[Depends(verify_auth_key)],
+)
 async def get_html(url_input: UrlInput, session: SessionDep):
     """
     Get HTML content from a URL.

@@ -12,5 +12,6 @@ All Rights Reserved.
 
 
 from .request_history_model import RequestHistoryModel
+from .auth_config_model import AuthConfigModel
 
-__all__ = ["RequestHistoryModel"]
+__all__ = ["RequestHistoryModel", "AuthConfigModel"]
