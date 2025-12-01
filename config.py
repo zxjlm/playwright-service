@@ -40,6 +40,8 @@ class ServiceConfig(BaseSettings):
     max_concurrent_requests: int = Field(default=10)
     mcp_bearer_token: str = Field(default="")
 
+    auth_config: int = Field(default=0)
+
     model_config = SettingsConfigDict(case_sensitive=False, env_prefix="service_")
 
     @model_validator(mode="after")

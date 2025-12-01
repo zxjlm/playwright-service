@@ -35,6 +35,33 @@ def get_waiting_requests() -> int:
         return 0
 
 
+async def force_get_content(
+    page: Page, url: str
+) -> tuple[str | None, Exception | None]:
+    html_content = None
+    last_error = None
+    # retry mechanism: wait for the page to be stable before reading the content
+    for attempt in range(3):
+        try:
+            # short wait for the page to be stable, avoid reading the content during navigation
+            await asyncio.sleep(0.5)
+            # try to wait for the DOM to be loaded
+            try:
+                await page.wait_for_load_state("domcontentloaded", timeout=2000)
+            except Exception:
+                pass  # ignore the timeout error, continue to try to get the content
+            html_content = await page.content()
+            if html_content and len(html_content) > 5000:
+                break
+        except Exception as retry_e:
+            last_error = retry_e
+            logger.debug(
+                f"Attempt {attempt + 1} to read content failed: {retry_e}, {url}"
+            )
+
+    return html_content, last_error
+
+
 async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
     response_time = 0
     response_headers = ""
@@ -93,7 +120,13 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                 assert response
 
                 logger.debug(f"Page loaded, waiting for 5 seconds: {url_input.url}")
-                await asyncio.sleep(2)
+                await asyncio.sleep(1)
+
+                try:
+                    await page.wait_for_load_state("domcontentloaded", timeout=2000)
+                except Exception as e_:
+                    logger.warning(f"Page load timeout: {e_}, {url_input.url}")
+                    pass  # ignore the timeout error
 
                 response_body = html = await page.content()
                 logger.debug(f"Page closed successfully: {url_input.url}")
@@ -108,15 +141,21 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                 )
             except PWTimeoutError as e:
                 logger.warning(f"Page load timeout: {e}, {url_input.url}")
+                await asyncio.sleep(0.5)
                 if url_input.is_force_get_content:
                     try:
-                        if (html_content := await page.content()) and len(
-                            html_content
-                        ) > 5000:
+                        html_content, last_error = await force_get_content(
+                            page, url_input.url
+                        )
+                        if html_content and len(html_content) > 5000:
                             result = HtmlResponse(
                                 html=html_content,
-                                page_status_code=600,
-                                page_error=f"page load timeout, {e}",
+                                page_status_code=600 if not last_error else 601,
+                                page_error=(
+                                    f"page load timeout, {e}"
+                                    if not last_error
+                                    else f"page load failed while force read content, {last_error}"
+                                ),
                             )
                     except Exception as e:
                         logger.warning(
