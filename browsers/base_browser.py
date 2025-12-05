@@ -18,27 +18,44 @@ from loguru import logger
 
 class BaseBrowser(ABC):
     """Browser Abstract Base Class"""
-    
+
     def __init__(self, name: str):
         self.name = name
         self.browser: Optional[Browser] = None
         self._is_initialized = False
-    
+
     @abstractmethod
     async def initialize(self, **kwargs) -> Browser:
         """Initialize browser instance"""
         pass
-    
+
     @abstractmethod
-    async def create_context(self, proxy: Optional[ProxySettings] = None) -> BrowserContext:
-        """Create browser context"""
+    async def create_context(
+        self,
+        proxy: Optional[ProxySettings] = None,
+        user_agent: Optional[str] = None,
+        viewport: Optional[dict] = None,
+        locale: Optional[str] = None,
+        timezone_id: Optional[str] = None,
+        geolocation: Optional[dict] = None,
+    ) -> BrowserContext:
+        """Create browser context
+
+        Args:
+            proxy: Proxy settings for the context
+            user_agent: Custom User-Agent string
+            viewport: Viewport size, e.g. {"width": 1920, "height": 1080}
+            locale: Locale for the context, e.g. "zh-CN"
+            timezone_id: Timezone ID, e.g. "Asia/Shanghai"
+            geolocation: Geolocation, e.g. {"latitude": 31.2, "longitude": 121.5}
+        """
         pass
-    
+
     @abstractmethod
     async def create_page(self, context: BrowserContext) -> Page:
         """Create page"""
         pass
-    
+
     async def close(self):
         """Close browser"""
         if self.browser:
@@ -46,12 +63,12 @@ class BaseBrowser(ABC):
             self.browser = None
             self._is_initialized = False
             logger.info(f"{self.name} browser closed")
-    
+
     @property
     def is_initialized(self) -> bool:
         """Check if browser is initialized"""
         return self._is_initialized and self.browser is not None
-    
+
     async def ensure_initialized(self, **kwargs) -> Browser:
         """Ensure browser is initialized"""
         if not self.is_initialized:
