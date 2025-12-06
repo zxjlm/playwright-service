@@ -11,7 +11,7 @@ All Rights Reserved.
 """
 
 from typing import Optional
-from playwright.async_api import (
+from patchright.async_api import (
     async_playwright,
     Browser,
     BrowserContext,
@@ -51,9 +51,14 @@ class FirefoxBrowser(BaseBrowser):
         user_prefs = kwargs.get("firefox_user_prefs", {})
         merged_prefs = {**default_prefs, **user_prefs}
 
+        # Default browser arguments for WAF bypass
+        default_args = kwargs.get("args", [])
+        if not default_args:
+            default_args = []
+
         browser = await playwright.firefox.launch(
             headless=kwargs.get("headless", True),
-            args=kwargs.get("args", []),
+            args=default_args,
             firefox_user_prefs=merged_prefs,
             slow_mo=kwargs.get("slow_mo"),
         )
@@ -67,6 +72,8 @@ class FirefoxBrowser(BaseBrowser):
         locale: Optional[str] = None,
         timezone_id: Optional[str] = None,
         geolocation: Optional[dict] = None,
+        extra_http_headers: Optional[dict] = None,
+        enable_waf_bypass: bool = True,
     ) -> BrowserContext:
         """Create Firefox browser context
 
@@ -77,21 +84,70 @@ class FirefoxBrowser(BaseBrowser):
             locale: Locale for the context, e.g. "zh-CN"
             timezone_id: Timezone ID, e.g. "Asia/Shanghai"
             geolocation: Geolocation, e.g. {"latitude": 31.2, "longitude": 121.5}
+            extra_http_headers: Additional HTTP headers
+            enable_waf_bypass: Enable WAF bypass features (default: True)
         """
         if not self.browser:
             raise RuntimeError("Browser not initialized")
 
+        # Get default WAF-optimized settings from base class
+        default_settings = self.get_default_waf_settings()
+        default_headers = self.get_default_waf_headers()
+
+        # Default values optimized for WAF bypass
+        default_user_agent = (
+            user_agent
+            or "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+        )
+        default_viewport = viewport or default_settings["viewport"]
+        default_locale = locale or default_settings["locale"]
+        default_timezone = timezone_id or default_settings["timezone_id"]
+        default_geolocation = geolocation or default_settings["geolocation"]
+
+        # Merge user-provided headers with defaults
+        if extra_http_headers:
+            merged_headers = {**default_headers, **extra_http_headers}
+        else:
+            merged_headers = default_headers
+
         context = await self.browser.new_context(
             ignore_https_errors=True,
             proxy=proxy,
-            user_agent=user_agent,
-            viewport=viewport,
-            locale=locale,
-            timezone_id=timezone_id,
-            geolocation=geolocation,
+            user_agent=default_user_agent,
+            viewport=default_viewport,
+            locale=default_locale,
+            timezone_id=default_timezone,
+            geolocation=default_geolocation,
+            permissions=["geolocation"],
+            extra_http_headers=merged_headers,
         )
 
-        # Block media files to improve performance
+        # Add anti-detection scripts for WAF bypass
+        if enable_waf_bypass:
+            await context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+                
+                // Firefox specific properties
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+                
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['zh-CN', 'zh', 'en-US', 'en']
+                });
+                
+                // Override permissions API
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) => (
+                    parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Notification.permission }) :
+                        originalQuery(parameters)
+                );
+            """)
+
+        # Block media files to improve performance (optional, can be disabled if needed)
         await context.route(
             "**/*.{png,jpg,jpeg,gif,svg,mp3,mp4,avi,flac,ogg,wav,webm}",
             handler=lambda route, request: route.abort(),

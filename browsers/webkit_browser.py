@@ -11,7 +11,7 @@ All Rights Reserved.
 """
 
 from typing import Optional
-from playwright.async_api import (
+from patchright.async_api import (
     async_playwright,
     Browser,
     BrowserContext,

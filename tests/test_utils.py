@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-utils 模块的单元测试
+Unit tests for utils module
 """
 
 import pytest
@@ -19,10 +19,10 @@ from base_proxy import ProxyManager
 
 
 class TestUtilsFunctions:
-    """utils 模块测试类"""
+    """Test class for utils module"""
 
     def test_get_waiting_requests_with_waiters(self):
-        """测试获取等待请求数量 - 有等待者"""
+        """Test getting waiting request count - with waiters"""
         with patch("apis.utils.request_semaphore") as mock_semaphore:
             mock_semaphore._waiters = [MagicMock(), MagicMock(), MagicMock()]
 
@@ -31,7 +31,7 @@ class TestUtilsFunctions:
             assert result == 3
 
     def test_get_waiting_requests_without_waiters(self):
-        """测试获取等待请求数量 - 无等待者"""
+        """Test getting waiting request count - without waiters"""
         with patch("apis.utils.request_semaphore") as mock_semaphore:
             mock_semaphore._waiters = []
 
@@ -40,7 +40,7 @@ class TestUtilsFunctions:
             assert result == 0
 
     def test_get_waiting_requests_none_waiters(self):
-        """测试获取等待请求数量 - waiters为None"""
+        """Test getting waiting request count - waiters is None"""
         with patch("apis.utils.request_semaphore") as mock_semaphore:
             mock_semaphore._waiters = None
 
@@ -50,7 +50,7 @@ class TestUtilsFunctions:
 
     @pytest.mark.asyncio
     async def test_get_html_base_success(self, mock_session):
-        """测试成功获取HTML内容"""
+        """Test successful HTML content retrieval"""
         url_input = UrlInput(
             url="https://example.com",
             browser_type="chrome",
@@ -65,14 +65,14 @@ class TestUtilsFunctions:
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器
+            # Mock browser
             mock_browser = AsyncMock()
             mock_context = AsyncMock()
             mock_page = AsyncMock()
@@ -81,7 +81,7 @@ class TestUtilsFunctions:
             mock_browser.create_page = AsyncMock(return_value=mock_page)
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟页面响应
+            # Mock page response
             mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"content-type": "text/html"}
@@ -95,11 +95,11 @@ class TestUtilsFunctions:
             mock_page.close = AsyncMock()
             mock_context.close = AsyncMock()
 
-            # 模拟信号量
+            # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
             mock_semaphore.__aexit__ = AsyncMock()
 
-            # 模拟请求历史模型
+            # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
             mock_model.create_request_history = AsyncMock()
 
@@ -112,13 +112,13 @@ class TestUtilsFunctions:
 
     @pytest.mark.asyncio
     async def test_get_html_base_with_cache(self, mock_session):
-        """测试使用缓存获取HTML内容"""
+        """Test HTML content retrieval with cache"""
         url_input = UrlInput(
             url="https://example.com", browser_type="chrome", use_cache=1
         )
 
         with patch("apis.utils.RequestHistoryModel") as mock_model:
-            # 模拟缓存命中
+            # Mock cache hit
             mock_cached_response = MagicMock()
             mock_cached_response.response_body = (
                 "<html><body>Cached Content</body></html>"
@@ -138,7 +138,7 @@ class TestUtilsFunctions:
 
     @pytest.mark.asyncio
     async def test_get_html_base_timeout_error(self, mock_session):
-        """测试页面加载超时错误"""
+        """Test page load timeout error"""
         url_input = UrlInput(
             url="https://example.com", browser_type="chrome", is_force_get_content=0
         )
@@ -150,12 +150,12 @@ class TestUtilsFunctions:
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器
+            # Mock browser
             mock_browser = AsyncMock()
             mock_context = AsyncMock()
             mock_page = AsyncMock()
@@ -164,16 +164,16 @@ class TestUtilsFunctions:
             mock_browser.create_page = AsyncMock(return_value=mock_page)
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟超时错误
+            # Mock timeout error
             mock_page.goto = AsyncMock(side_effect=PWTimeoutError("Timeout"))
             mock_page.close = AsyncMock()
             mock_context.close = AsyncMock()
 
-            # 模拟信号量
+            # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
             mock_semaphore.__aexit__ = AsyncMock()
 
-            # 模拟请求历史模型
+            # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
             mock_model.create_request_history = AsyncMock()
 
@@ -186,7 +186,7 @@ class TestUtilsFunctions:
 
     @pytest.mark.asyncio
     async def test_get_html_base_force_content_on_timeout(self, mock_session):
-        """测试超时时强制获取内容"""
+        """Test forced content retrieval on timeout"""
         url_input = UrlInput(
             url="https://example.com", browser_type="chrome", is_force_get_content=1
         )
@@ -198,12 +198,12 @@ class TestUtilsFunctions:
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器
+            # Mock browser
             mock_browser = AsyncMock()
             mock_context = AsyncMock()
             mock_page = AsyncMock()
@@ -212,7 +212,7 @@ class TestUtilsFunctions:
             mock_browser.create_page = AsyncMock(return_value=mock_page)
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟超时错误，但强制获取内容成功
+            # Mock timeout error, but forced content retrieval succeeds
             mock_page.goto = AsyncMock(side_effect=PWTimeoutError("Timeout"))
             mock_page.content = AsyncMock(
                 return_value="<html><body>" + "Force Content " * 1000 + "</body></html>"
@@ -220,11 +220,11 @@ class TestUtilsFunctions:
             mock_page.close = AsyncMock()
             mock_context.close = AsyncMock()
 
-            # 模拟信号量
+            # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
             mock_semaphore.__aexit__ = AsyncMock()
 
-            # 模拟请求历史模型
+            # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
             mock_model.create_request_history = AsyncMock()
 
@@ -237,7 +237,7 @@ class TestUtilsFunctions:
 
     @pytest.mark.asyncio
     async def test_get_html_screenshot_success(self, mock_session):
-        """测试成功获取截图"""
+        """Test successful screenshot retrieval"""
         screenshot_input = ScreenshotInput(
             url="https://example.com", browser_type="chrome", width=1920, height=1080
         )
@@ -249,14 +249,14 @@ class TestUtilsFunctions:
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器
+            # Mock browser
             mock_browser = AsyncMock()
             mock_context = AsyncMock()
             mock_page = AsyncMock()
@@ -265,7 +265,7 @@ class TestUtilsFunctions:
             mock_browser.create_page = AsyncMock(return_value=mock_page)
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟页面响应
+            # Mock page response
             mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"content-type": "text/html"}
@@ -278,11 +278,11 @@ class TestUtilsFunctions:
             mock_page.close = AsyncMock()
             mock_context.close = AsyncMock()
 
-            # 模拟信号量
+            # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
             mock_semaphore.__aexit__ = AsyncMock()
 
-            # 模拟请求历史模型
+            # Mock request history model
             mock_model.create_request_history = AsyncMock()
 
             result = await get_html_screenshot(screenshot_input, mock_session)
@@ -294,7 +294,7 @@ class TestUtilsFunctions:
 
     @pytest.mark.asyncio
     async def test_get_html_screenshot_full_page(self, mock_session):
-        """测试全页面截图"""
+        """Test full page screenshot"""
         screenshot_input = ScreenshotInput(
             url="https://example.com",
             browser_type="chrome",
@@ -310,12 +310,12 @@ class TestUtilsFunctions:
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器
+            # Mock browser
             mock_browser = AsyncMock()
             mock_context = AsyncMock()
             mock_page = AsyncMock()
@@ -324,7 +324,7 @@ class TestUtilsFunctions:
             mock_browser.create_page = AsyncMock(return_value=mock_page)
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟页面响应
+            # Mock page response
             mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"content-type": "text/html"}
@@ -337,11 +337,11 @@ class TestUtilsFunctions:
             mock_page.close = AsyncMock()
             mock_context.close = AsyncMock()
 
-            # 模拟信号量
+            # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
             mock_semaphore.__aexit__ = AsyncMock()
 
-            # 模拟请求历史模型
+            # Mock request history model
             mock_model.create_request_history = AsyncMock()
 
             result = await get_html_screenshot(screenshot_input, mock_session)
@@ -350,12 +350,12 @@ class TestUtilsFunctions:
             assert result.screenshot == "ZnVsbF9wYWdlX3NjcmVlbnNob3Q="  # base64 encoded
             assert result.page_status_code == 200
 
-            # 验证截图调用时使用了full_page参数
+            # Verify screenshot was called with full_page parameter
             mock_page.screenshot.assert_called_once_with(full_page=True)
 
     @pytest.mark.asyncio
     async def test_get_html_base_general_exception(self, mock_session):
-        """测试一般异常处理"""
+        """Test general exception handling"""
         url_input = UrlInput(url="https://example.com", browser_type="chrome")
 
         with (
@@ -364,18 +364,18 @@ class TestUtilsFunctions:
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # 模拟代理管理器抛出异常
+            # Mock proxy manager raising exception
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 side_effect=Exception("Proxy error")
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟信号量
+            # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
             mock_semaphore.__aexit__ = AsyncMock()
 
-            # 模拟请求历史模型
+            # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
             mock_model.create_request_history = AsyncMock()
 

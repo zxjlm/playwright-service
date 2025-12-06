@@ -11,7 +11,7 @@ All Rights Reserved.
 """
 
 from typing import Optional
-from playwright.async_api import (
+from patchright.async_api import (
     async_playwright,
     Browser,
     BrowserContext,
@@ -32,40 +32,27 @@ class ChromeBrowser(BaseBrowser):
         """Initialize Chrome browser
 
          Args:
-             headless: Run browser in headless mode (default: True)
+             headless: Run browser in headless mode (default: False for better WAF bypass)
              args: Additional browser arguments to pass
              devtools: Open DevTools automatically (Chromium only, default: False)
              chromium_sandbox: Enable Chromium sandbox (default: False)
              slow_mo: Slow down operations by specified milliseconds
-
-        args=[
-             '--timezone=Asia',
-             # f'--proxy-server={get_proxy()}',
-             '--fpseed=12lfisffwfaTYa',
-             '--chrome-version=130.0.7151.70',
-             '--noimage',
-             '--nocrash',
-             '--lang=zh-CN',
-             '--accept-lang=zh-CN',
-             '-cpucores=6',
-             '--platformversion=15.4.1',
-             '--custom-screen=1792x1120',
-             '--force-device-scale-factor=1',
-             '--custom-geolocation=110,220',
-             '--use-fake-device-for-media-stream',
-             '--custom-brand="Microsoft Edge"',
-             '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0"',
-             '--close-portscan',
-             '--iconumber=1',
-         ],
         """
         playwright = await async_playwright().start()
 
-        # Valid Chromium-specific arguments
+        # Default Chromium arguments optimized for WAF bypass
+        # Key: --disable-blink-features=AutomationControlled is critical for bypassing navigator.webdriver detection
         default_args = [
+            "--disable-blink-features=AutomationControlled",  # Critical for WAF bypass
             "--lang=zh-CN",
+            "--accept-lang=zh-CN",
             "--force-device-scale-factor=1",
             "--use-fake-device-for-media-stream",
+            "--disable-dev-shm-usage",
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-web-security",
+            "--disable-features=IsolateOrigins,site-per-process",
         ]
 
         # Merge default args with user-provided args
@@ -73,7 +60,7 @@ class ChromeBrowser(BaseBrowser):
         merged_args = default_args + user_args
 
         browser = await playwright.chromium.launch(
-            headless=kwargs.get("headless", True),
+            headless=kwargs.get("headless", False),  # Default to False for better WAF bypass
             args=merged_args,
             devtools=kwargs.get("devtools", False),
             chromium_sandbox=kwargs.get("chromium_sandbox", False),
@@ -89,6 +76,8 @@ class ChromeBrowser(BaseBrowser):
         locale: Optional[str] = None,
         timezone_id: Optional[str] = None,
         geolocation: Optional[dict] = None,
+        extra_http_headers: Optional[dict] = None,
+        enable_waf_bypass: bool = True,
     ) -> BrowserContext:
         """Create Chrome browser context
 
@@ -99,21 +88,104 @@ class ChromeBrowser(BaseBrowser):
             locale: Locale for the context, e.g. "zh-CN"
             timezone_id: Timezone ID, e.g. "Asia/Shanghai"
             geolocation: Geolocation, e.g. {"latitude": 31.2, "longitude": 121.5}
+            extra_http_headers: Additional HTTP headers
+            enable_waf_bypass: Enable WAF bypass features (default: True)
         """
         if not self.browser:
             raise RuntimeError("Browser not initialized")
 
+        # Get default WAF-optimized settings
+        default_settings = self.get_default_waf_settings()
+        default_headers = self.get_default_waf_headers()
+
+        # Default values optimized for WAF bypass
+        default_user_agent = (
+            user_agent
+            or "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        default_viewport = viewport or default_settings["viewport"]
+        default_locale = locale or default_settings["locale"]
+        default_timezone = timezone_id or default_settings["timezone_id"]
+        default_geolocation = geolocation or default_settings["geolocation"]
+
+        # Merge user-provided headers with defaults
+        if extra_http_headers:
+            merged_headers = {**default_headers, **extra_http_headers}
+        else:
+            merged_headers = default_headers
+
         context = await self.browser.new_context(
             ignore_https_errors=True,
             proxy=proxy,
-            user_agent=user_agent,
-            viewport=viewport,
-            locale=locale,
-            timezone_id=timezone_id,
-            geolocation=geolocation,
+            user_agent=default_user_agent,
+            viewport=default_viewport,
+            locale=default_locale,
+            timezone_id=default_timezone,
+            geolocation=default_geolocation,
+            permissions=["geolocation"],
+            extra_http_headers=merged_headers,
         )
 
-        # Block media files to improve performance
+        # Add anti-detection scripts for WAF bypass
+        if enable_waf_bypass:
+            await context.add_init_script("""
+                // Hide webdriver property
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+                
+                // Override chrome object
+                window.chrome = {
+                    runtime: {},
+                    loadTimes: function() {},
+                    csi: function() {},
+                    app: {}
+                };
+                
+                // Override plugins
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5]
+                });
+                
+                // Override languages
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['zh-CN', 'zh', 'en-US', 'en']
+                });
+                
+                // Override permissions API
+                const originalQuery = window.navigator.permissions.query;
+                window.navigator.permissions.query = (parameters) => (
+                    parameters.name === 'notifications' ?
+                        Promise.resolve({ state: Notification.permission }) :
+                        originalQuery(parameters)
+                );
+                
+                // Override webdriver property (additional protection)
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => false
+                });
+                
+                // Add realistic browser features
+                Object.defineProperty(navigator, 'hardwareConcurrency', {
+                    get: () => 8
+                });
+                
+                Object.defineProperty(navigator, 'deviceMemory', {
+                    get: () => 8
+                });
+                
+                // Override getBattery if available
+                if (navigator.getBattery) {
+                    navigator.getBattery = () => Promise.resolve({
+                        charging: true,
+                        chargingTime: 0,
+                        dischargingTime: Infinity,
+                        level: 1
+                    });
+                }
+            """)
+
+        # Block media files to improve performance (optional, can be disabled if needed)
         await context.route(
             "**/*.{png,jpg,jpeg,gif,svg,mp3,mp4,avi,flac,ogg,wav,webm}",
             handler=lambda route, request: route.abort(),
