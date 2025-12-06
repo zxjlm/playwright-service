@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-service_router 的单元测试
+Unit tests for service_router
 """
 
 import pytest
@@ -23,7 +23,7 @@ from base_proxy import ProxyManager
 
 
 class TestServiceRouter:
-    """service_router 测试类"""
+    """Test class for service_router"""
 
     def test_get_html_success(
         self,
@@ -34,14 +34,14 @@ class TestServiceRouter:
         mock_browser,
         sample_url_input,
     ):
-        """测试成功获取HTML内容"""
+        """Test successful HTML content retrieval"""
         with (
             patch("apis.service_router.browser_manager", mock_browser_manager),
             patch("apis.utils.ProxyManager", return_value=mock_proxy_manager),
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
-            # 模拟成功响应
+            # Mock successful response
             mock_response = HtmlResponse(
                 html="<html><body>Test Content</body></html>",
                 page_status_code=200,
@@ -58,25 +58,25 @@ class TestServiceRouter:
             assert data["page_error"] == ""
 
     def test_get_html_with_proxy(self, client, mock_session, sample_url_input):
-        """测试使用代理获取HTML"""
+        """Test HTML retrieval with proxy"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
             patch("apis.utils.ProxyManager") as mock_pm_class,
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器管理器
+            # Mock browser manager
             mock_browser = AsyncMock()
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟成功响应
+            # Mock successful response
             mock_response = HtmlResponse(
                 html="<html><body>Proxy Content</body></html>",
                 page_status_code=200,
@@ -91,7 +91,7 @@ class TestServiceRouter:
             assert "Proxy Content" in data["html"]
 
     def test_clean_html_success(self, client, sample_clean_html_input):
-        """测试HTML清理功能"""
+        """Test HTML cleaning functionality"""
         with patch("apis.service_router.clean_html_utils") as mock_clean:
             mock_clean.return_value = "<html><body>Cleaned Content</body></html>"
 
@@ -102,7 +102,7 @@ class TestServiceRouter:
             assert data["html"] == "<html><body>Cleaned Content</body></html>"
 
     def test_clean_html_empty_input(self, client):
-        """测试空HTML输入"""
+        """Test empty HTML input"""
         empty_input = {"html": "", "parser": "html.parser"}
 
         response = client.post("/service/clean_html", json=empty_input)
@@ -112,7 +112,7 @@ class TestServiceRouter:
         assert data["html"] == ""
 
     def test_get_browser_info_available(self, client):
-        """测试获取可用浏览器信息"""
+        """Test getting available browser information"""
         with patch("apis.service_router.browser_manager") as mock_bm:
             mock_bm.is_browser_available.return_value = True
 
@@ -123,7 +123,7 @@ class TestServiceRouter:
             assert data["status"] == "chrome Service Available"
 
     def test_get_browser_info_unavailable(self, client):
-        """测试获取不可用浏览器信息"""
+        """Test getting unavailable browser information"""
         with patch("apis.service_router.browser_manager") as mock_bm:
             mock_bm.is_browser_available.return_value = False
 
@@ -134,7 +134,7 @@ class TestServiceRouter:
             assert data["status"] == "chrome Service Unavailable"
 
     def test_get_supported_browsers(self, client):
-        """测试获取支持的浏览器列表"""
+        """Test getting supported browser list"""
         with patch("apis.service_router.browser_manager") as mock_bm:
             mock_bm.get_supported_browsers.return_value = [
                 "chrome",
@@ -149,7 +149,7 @@ class TestServiceRouter:
             assert data["browsers"] == ["chrome", "firefox", "webkit"]
 
     def test_liveness_probe(self, client):
-        """测试存活探针"""
+        """Test liveness probe"""
         response = client.get("/service/health/liveness")
 
         assert response.status_code == 200
@@ -157,7 +157,7 @@ class TestServiceRouter:
         assert data["status"] == "ok"
 
     def test_readiness_probe_available(self, client):
-        """测试就绪探针 - 浏览器可用"""
+        """Test readiness probe - browser available"""
         with patch("apis.service_router.browser_manager") as mock_bm:
             mock_bm.is_browser_available.return_value = True
 
@@ -168,7 +168,7 @@ class TestServiceRouter:
             assert data["status"] == "ok"
 
     def test_readiness_probe_unavailable(self, client):
-        """测试就绪探针 - 浏览器不可用"""
+        """Test readiness probe - browser unavailable"""
         with patch("apis.service_router.browser_manager") as mock_bm:
             mock_bm.is_browser_available.return_value = False
 
@@ -181,21 +181,21 @@ class TestServiceRouter:
     def test_get_screenshot_success(
         self, client, mock_session, sample_screenshot_input
     ):
-        """测试成功获取截图"""
+        """Test successful screenshot retrieval"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
             patch("apis.utils.ProxyManager") as mock_pm_class,
             patch("apis.service_router.get_html_screenshot") as mock_screenshot,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟成功响应
+            # Mock successful response
             mock_response = ScreenshotResponse(
                 screenshot=base64.b64encode(b"fake_screenshot_data").decode("utf-8"),
                 page_status_code=200,
@@ -214,7 +214,7 @@ class TestServiceRouter:
             assert data["page_error"] == ""
 
     def test_invalid_browser_type(self, client, sample_url_input):
-        """测试无效的浏览器类型"""
+        """Test invalid browser type"""
         invalid_input = sample_url_input.copy()
         invalid_input["browser_type"] = "invalid_browser"
 
@@ -224,37 +224,37 @@ class TestServiceRouter:
         assert response.status_code == 422
 
     def test_invalid_url(self, client, sample_url_input):
-        """测试无效的URL"""
+        """Test invalid URL"""
         invalid_input = sample_url_input.copy()
         invalid_input["url"] = "not-a-valid-url"
 
         response = client.post("/service/html", json=invalid_input)
 
-        # 应该返回422验证错误
+        # Should return 422 validation error
         assert response.status_code == 422
 
     def test_timeout_validation(self, client, sample_url_input):
-        """测试超时时间验证"""
-        # 测试超时时间过短
+        """Test timeout validation"""
+        # Test timeout too short
         invalid_input = sample_url_input.copy()
-        invalid_input["timeout"] = 500  # 小于最小值1000
+        invalid_input["timeout"] = 500  # Less than minimum 1000
 
         response = client.post("/service/html", json=invalid_input)
         assert response.status_code == 422
 
-        # 测试超时时间过长
-        invalid_input["timeout"] = 200000  # 大于最大值100000
+        # Test timeout too long
+        invalid_input["timeout"] = 200000  # Greater than maximum 100000
 
         response = client.post("/service/html", json=invalid_input)
         assert response.status_code == 422
 
 
 class TestProxyManagerMock:
-    """ProxyManager 模拟测试"""
+    """ProxyManager mock tests"""
 
     @pytest.mark.asyncio
     async def test_proxy_manager_get_proxy_dynamic(self):
-        """测试动态代理获取"""
+        """Test dynamic proxy retrieval"""
         with patch("base_proxy.service_config") as mock_config:
             mock_config.proxy_type = "dynamic"
             mock_config.proxy_api_url = "http://test-proxy-api.com"
@@ -275,7 +275,7 @@ class TestProxyManagerMock:
 
     @pytest.mark.asyncio
     async def test_proxy_manager_get_proxy_static(self):
-        """测试静态代理获取"""
+        """Test static proxy retrieval"""
         with patch("base_proxy.service_config") as mock_config:
             mock_config.proxy_type = "static"
             mock_config.static_proxy = "http://127.0.0.1:3128"
@@ -287,7 +287,7 @@ class TestProxyManagerMock:
 
     @pytest.mark.asyncio
     async def test_proxy_manager_get_proxy_none(self):
-        """测试无代理模式"""
+        """Test no proxy mode"""
         with patch("base_proxy.service_config") as mock_config:
             mock_config.proxy_type = "none"
 
@@ -298,7 +298,7 @@ class TestProxyManagerMock:
 
     @pytest.mark.asyncio
     async def test_proxy_manager_check_proxy_success(self):
-        """测试代理检查成功"""
+        """Test proxy check success"""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
@@ -313,7 +313,7 @@ class TestProxyManagerMock:
 
     @pytest.mark.asyncio
     async def test_proxy_manager_check_proxy_failure(self):
-        """测试代理检查失败"""
+        """Test proxy check failure"""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_response = MagicMock()
@@ -328,7 +328,7 @@ class TestProxyManagerMock:
 
     @pytest.mark.asyncio
     async def test_proxy_manager_check_proxy_exception(self):
-        """测试代理检查异常"""
+        """Test proxy check exception"""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client.head = AsyncMock(side_effect=Exception("Connection failed"))
@@ -341,28 +341,28 @@ class TestProxyManagerMock:
 
 
 class TestIntegrationComparison:
-    """集成测试 - 实际请求比对"""
+    """Integration tests - actual request comparison"""
 
     def test_html_content_comparison(self, client, sample_url_input):
-        """测试HTML内容比对功能"""
+        """Test HTML content comparison functionality"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
             patch("apis.utils.ProxyManager") as mock_pm_class,
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器管理器
+            # Mock browser manager
             mock_browser = AsyncMock()
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟不同的响应内容
+            # Mock different response content
             mock_response_with_proxy = HtmlResponse(
                 html="<html><body>Content via Proxy</body></html>",
                 page_status_code=200,
@@ -375,14 +375,14 @@ class TestIntegrationComparison:
                 page_error="",
             )
 
-            # 第一次请求（使用代理）
+            # First request (with proxy)
             mock_get_html.return_value = mock_response_with_proxy
             response1 = client.post("/service/html", json=sample_url_input)
             assert response1.status_code == 200
             data1 = response1.json()
             assert "Proxy" in data1["html"]
 
-            # 第二次请求（不使用代理）
+            # Second request (without proxy)
             mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
             mock_get_html.return_value = mock_response_without_proxy
             response2 = client.post("/service/html", json=sample_url_input)
@@ -390,29 +390,29 @@ class TestIntegrationComparison:
             data2 = response2.json()
             assert "without Proxy" in data2["html"]
 
-            # 验证内容确实不同
+            # Verify content is indeed different
             assert data1["html"] != data2["html"]
 
     def test_screenshot_comparison(self, client, sample_screenshot_input):
-        """测试截图比对功能"""
+        """Test screenshot comparison functionality"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
             patch("apis.utils.ProxyManager") as mock_pm_class,
             patch("apis.service_router.get_html_screenshot") as mock_screenshot,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器管理器
+            # Mock browser manager
             mock_browser = AsyncMock()
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟不同的截图数据
+            # Mock different screenshot data
             screenshot_data_1 = base64.b64encode(b"screenshot_data_1").decode("utf-8")
             screenshot_data_2 = base64.b64encode(b"screenshot_data_2").decode("utf-8")
 
@@ -424,57 +424,57 @@ class TestIntegrationComparison:
                 screenshot=screenshot_data_2, page_status_code=200, page_error=""
             )
 
-            # 第一次截图
+            # First screenshot
             mock_screenshot.return_value = mock_response_1
             response1 = client.post("/service/screenshot", json=sample_screenshot_input)
             assert response1.status_code == 200
             data1 = response1.json()
             assert data1["screenshot"] == screenshot_data_1
 
-            # 第二次截图
+            # Second screenshot
             mock_screenshot.return_value = mock_response_2
             response2 = client.post("/service/screenshot", json=sample_screenshot_input)
             assert response2.status_code == 200
             data2 = response2.json()
             assert data2["screenshot"] == screenshot_data_2
 
-            # 验证截图数据确实不同
+            # Verify screenshot data is indeed different
             assert data1["screenshot"] != data2["screenshot"]
 
     def test_error_handling_comparison(self, client, sample_url_input):
-        """测试错误处理比对"""
+        """Test error handling comparison"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
             patch("apis.utils.ProxyManager") as mock_pm_class,
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
-            # 模拟代理管理器
+            # Mock proxy manager
             mock_proxy_manager = MagicMock()
             mock_proxy_manager.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
             mock_pm_class.return_value = mock_proxy_manager
 
-            # 模拟浏览器管理器
+            # Mock browser manager
             mock_browser = AsyncMock()
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
-            # 模拟超时错误
+            # Mock timeout error
             mock_timeout_response = HtmlResponse(
                 html="",
                 page_status_code=601,
                 page_error="page load timeout, TimeoutError",
             )
 
-            # 模拟网络错误
+            # Mock network error
             mock_network_error_response = HtmlResponse(
                 html="",
                 page_status_code=602,
                 page_error="page load failed, NetworkError",
             )
 
-            # 测试超时错误
+            # Test timeout error
             mock_get_html.return_value = mock_timeout_response
             response1 = client.post("/service/html", json=sample_url_input)
             assert response1.status_code == 200
@@ -482,7 +482,7 @@ class TestIntegrationComparison:
             assert data1["page_status_code"] == 601
             assert "timeout" in data1["page_error"]
 
-            # 测试网络错误
+            # Test network error
             mock_get_html.return_value = mock_network_error_response
             response2 = client.post("/service/html", json=sample_url_input)
             assert response2.status_code == 200
@@ -490,6 +490,6 @@ class TestIntegrationComparison:
             assert data2["page_status_code"] == 602
             assert "failed" in data2["page_error"]
 
-            # 验证错误类型不同
+            # Verify error types are different
             assert data1["page_status_code"] != data2["page_status_code"]
             assert data1["page_error"] != data2["page_error"]

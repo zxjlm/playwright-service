@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-HTML 清理功能的单元测试
+Unit tests for HTML cleaning functionality
 """
 
 import pytest
@@ -9,10 +9,10 @@ from utils import clean_html_utils
 
 
 class TestCleanHtmlUtils:
-    """HTML 清理工具测试类"""
+    """Test class for HTML cleaning utilities"""
 
     def test_clean_html_basic(self):
-        """测试基本HTML清理功能"""
+        """Test basic HTML cleaning functionality"""
         html = """
         <html>
             <head>
@@ -30,30 +30,30 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证脚本和样式被移除
+        # Verify scripts and styles are removed
         assert "<script>" not in result
         assert "<style>" not in result
         assert "<link>" not in result
 
-        # 验证图片和视频被移除
+        # Verify images and videos are removed
         assert "<img>" not in result
         assert "<video>" not in result
 
-        # 验证内容保留
+        # Verify content is preserved
         assert "Test Content" in result
 
     def test_clean_html_empty_input(self):
-        """测试空输入"""
+        """Test empty input"""
         result = clean_html_utils("")
         assert result == ""
 
     def test_clean_html_none_input(self):
-        """测试None输入"""
+        """Test None input"""
         result = clean_html_utils(None)
         assert result == ""
 
     def test_clean_html_remove_hidden_elements(self):
-        """测试移除隐藏元素"""
+        """Test removal of hidden elements"""
         html = """
         <div style="display: none">Hidden Content</div>
         <div style="visibility: hidden">Also Hidden</div>
@@ -62,15 +62,15 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证隐藏元素被移除
+        # Verify hidden elements are removed
         assert "Hidden Content" not in result
         assert "Also Hidden" not in result
 
-        # 验证可见内容保留
+        # Verify visible content is preserved
         assert "Visible Content" in result
 
     def test_clean_html_remove_javascript_links(self):
-        """测试移除JavaScript链接"""
+        """Test removal of JavaScript links"""
         html = """
         <a href="javascript:void(0)">JS Link</a>
         <a href="https://example.com">Normal Link</a>
@@ -79,15 +79,15 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证JavaScript链接被移除
+        # Verify JavaScript links are removed
         assert "JS Link" not in result
         assert "Another JS Link" not in result
 
-        # 验证正常链接保留
+        # Verify normal links are preserved
         assert "Normal Link" in result
 
     def test_clean_html_clean_tag_attributes(self):
-        """测试清理标签属性"""
+        """Test cleaning tag attributes"""
         html = """
         <a href="https://example.com" id="test" class="link" onclick="alert('test')" title="Link Title">
             Content
@@ -96,18 +96,18 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证不必要的属性被移除
+        # Verify unnecessary attributes are removed
         assert "id=" not in result
         assert "class=" not in result
         assert "onclick=" not in result
 
-        # 验证允许的属性保留
+        # Verify allowed attributes are preserved
         assert "href=" in result
         assert "title=" in result
         assert "Content" in result
 
     def test_clean_html_unwrap_tags(self):
-        """测试标签解包功能"""
+        """Test tag unwrapping functionality"""
         html = """
         <div>
             <span>Nested Content</span>
@@ -117,17 +117,17 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证div和span标签被移除，但内容保留
+        # Verify div and span tags are removed, but content is preserved
         assert "<div>" not in result
         assert "<span>" not in result
         assert "<input" not in result
 
-        # 验证内容保留
+        # Verify content is preserved
         assert "Nested Content" in result
 
     def test_clean_html_remove_comments(self):
-        """测试处理HTML注释"""
-        # 注释处理可能因BeautifulSoup而不同，测试主要关注内容保留
+        """Test HTML comment handling"""
+        # Comment handling may vary with BeautifulSoup, test focuses on content preservation
         html = """
         <!-- This is a comment -->
         <div>Content</div>
@@ -136,11 +136,11 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证内容保留
+        # Verify content is preserved
         assert "Content" in result
 
     def test_clean_html_remove_media_tags(self):
-        """测试移除媒体标签"""
+        """Test removal of media tags"""
         html = """
         <img src="image.jpg" alt="Image">
         <video src="video.mp4">Video Content</video>
@@ -151,22 +151,22 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证媒体标签被移除
+        # Verify media tags are removed
         assert "<img" not in result
         assert "<video" not in result
         assert "<audio" not in result
         assert "<canvas" not in result
 
-        # 验证媒体内容被移除
+        # Verify media content is removed
         assert "Video Content" not in result
         assert "Audio Content" not in result
         assert "Canvas Content" not in result
 
-        # 验证常规内容保留
+        # Verify regular content is preserved
         assert "Regular Content" in result
 
     def test_clean_html_remove_iframe_svg(self):
-        """测试移除iframe和svg"""
+        """Test removal of iframe and svg"""
         html = """
         <iframe src="https://example.com"></iframe>
         <svg><circle cx="50" cy="50" r="40"></circle></svg>
@@ -175,28 +175,28 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证iframe和svg被移除
+        # Verify iframe and svg are removed
         assert "<iframe" not in result
         assert "<svg>" not in result
 
-        # 验证内容保留
+        # Verify content is preserved
         assert "Content" in result
 
     def test_clean_html_preserve_important_attributes(self):
-        """测试保留重要属性"""
+        """Test preservation of important attributes"""
         html = """
         <a href="https://example.com" title="Link Title">Link Text</a>
         """
 
         result = clean_html_utils(html)
 
-        # 验证重要属性保留（img标签会被移除，所以只测试a标签）
+        # Verify important attributes are preserved (img tags will be removed, so only test a tags)
         assert "href=" in result
         assert "title=" in result
         assert "Link Text" in result
 
     def test_clean_html_complex_structure(self):
-        """测试复杂HTML结构清理"""
+        """Test complex HTML structure cleaning"""
         html = """
         <html>
         <head>
@@ -216,7 +216,7 @@ class TestCleanHtmlUtils:
 
         result = clean_html_utils(html)
 
-        # 验证所有不需要的元素被移除
+        # Verify all unnecessary elements are removed
         assert "<script>" not in result
         assert "<style>" not in result
         assert "<head>" not in result
@@ -224,23 +224,23 @@ class TestCleanHtmlUtils:
         assert "javascript:" not in result
         assert "onclick=" not in result
 
-        # 验证重要内容保留
+        # Verify important content is preserved
         assert "Main Title" in result
         assert "This is a paragraph" in result
         assert "Home" in result
 
     def test_clean_html_with_different_parser(self):
-        """测试使用不同解析器"""
+        """Test using different parsers"""
         html = "<div>Test Content</div>"
 
-        # 测试默认解析器
+        # Test default parser
         result1 = clean_html_utils(html, "html.parser")
         assert "Test Content" in result1
 
-        # 测试lxml解析器（如果可用）
+        # Test lxml parser (if available)
         try:
             result2 = clean_html_utils(html, "lxml")
             assert "Test Content" in result2
         except Exception:
-            # lxml可能不可用，这是正常的
+            # lxml may not be available, this is normal
             pass

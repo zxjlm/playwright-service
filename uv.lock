@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = "==3.12.*"
 
 [[package]]
@@ -250,6 +251,8 @@ wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/19/0d/6660d55f7373b2ff8152401a83e02084956da23ae58cddbfb0b330978fe9/greenlet-3.2.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3b3812d8d0c9579967815af437d96623f45c0f2ae5f04e366de62a12d83a8fb0" },
     { url = "https://mirrors.aliyun.com/pypi/packages/8e/1a/c953fdedd22d81ee4629afbb38d2f9d71e37d23caace44775a3a969147d4/greenlet-3.2.4-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:abbf57b5a870d30c4675928c37278493044d7c14378350b3aa5d484fa65575f0" },
     { url = "https://mirrors.aliyun.com/pypi/packages/3f/c7/12381b18e21aef2c6bd3a636da1088b888b97b7a0362fac2e4de92405f97/greenlet-3.2.4-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:20fb936b4652b6e307b8f347665e2c615540d4b42b3b4c8a321d8286da7e520f" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/27/45/80935968b53cfd3f33cf99ea5f08227f2646e044568c9b1555b58ffd61c2/greenlet-3.2.4-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:ee7a6ec486883397d70eec05059353b8e83eca9168b9f3f9a361971e77e0bcd0" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/69/02/b7c30e5e04752cb4db6202a3858b149c0710e5453b71a3b2aec5d78a1aab/greenlet-3.2.4-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:326d234cbf337c9c3def0676412eb7040a35a768efc92504b947b3e9cfc7543d" },
     { url = "https://mirrors.aliyun.com/pypi/packages/e9/08/b0814846b79399e585f974bbeebf5580fbe59e258ea7be64d9dfb253c84f/greenlet-3.2.4-cp312-cp312-win_amd64.whl", hash = "sha256:a7d4e128405eea3814a12cc2605e0e6aedb4035bf32697f72deca74de4105e02" },
 ]
 
@@ -501,6 +504,25 @@ wheels = [
 ]
 
 [[package]]
+name = "patchright"
+version = "1.56.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "greenlet" },
+    { name = "pyee" },
+]
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/0d/d6/ac03353f1b3138541356a044c2d7d3e01b73f9555c7281dab3423c5d44da/patchright-1.56.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:9df1e0b2c35a298ad2807044699476d3e872f76117c319077b68d7b8ac8bffae" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/a8/f2/e33cd3e6916ed959f5b9be1182363e19771be81541a77b2c5615a6434cc8/patchright-1.56.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:e0d8e86d743f4da99f83e9962f9317bd3aaabe4e9db86d3e12cb1d0f39e2f469" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/5f/49/510b8fb761a7e6a2cbd8381f2254fd9442055e27961c0565944d5634ccb6/patchright-1.56.0-py3-none-macosx_11_0_universal2.whl", hash = "sha256:e939a9651ebad6ed5afb84e6cf8b874fd80e4b03a912509dc5159f0fa2d4a752" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/e6/ad/17f72b906a1d3d9750b26964d4481340defbfc02f039c888756061f41a33/patchright-1.56.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:cef0f31334dece118fa8dbe20e0c0ac97ea539a2a3e7dd007a67d05b4c3e0512" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/53/b4/6546fb868f464c888cee8e95d5b0cc4e276afc5e531bc3ca737e2a910f77/patchright-1.56.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:02329457d4f9e92b49209adceec33097042b6a6f03de31185a2f99721aeded6a" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/11/4b/a43f86570cb72f732723c19ba71f1c02200ed1cc762d71daa2c35718a529/patchright-1.56.0-py3-none-win32.whl", hash = "sha256:5502899cd8764ccc7a18c3cb47a76e49b25ec4eae155ec5ebea9e5e0022cc811" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/95/8d/37cc3127c6085ffa6482832a07f84587f2f04dbbaf194cc395bb2afa811c/patchright-1.56.0-py3-none-win_amd64.whl", hash = "sha256:0fe85d8f6b541689185115f3ce69e87a7f5dd964ec6aaeac635d4db5a906aec1" },
+    { url = "https://mirrors.aliyun.com/pypi/packages/c5/37/0b79ddfc6a2ba16e9f258670ea40a74c791d925f1847cf4ad0e739bc7506/patchright-1.56.0-py3-none-win_arm64.whl", hash = "sha256:8bbf1c753e7b07b889a3ff43109ce3cea457605ea6b0477e65af4d9a2c5585cf" },
+]
+
+[[package]]
 name = "playwright"
 version = "1.54.0"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -534,6 +556,7 @@ dependencies = [
     { name = "httpx" },
     { name = "loguru" },
     { name = "markdownify" },
+    { name = "patchright" },
     { name = "playwright" },
     { name = "pydantic-settings" },
     { name = "requests" },
@@ -562,6 +585,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "markdownify", specifier = ">=1.2.0" },
+    { name = "patchright", specifier = ">=1.56.0" },
     { name = "playwright", specifier = "==1.54.0" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
     { name = "requests", specifier = ">=2.32.3" },

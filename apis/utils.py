@@ -14,7 +14,7 @@ import base64
 import json
 import time
 from loguru import logger
-from playwright.async_api import (
+from patchright.async_api import (
     Page,
     TimeoutError as PWTimeoutError,
     ProxySettings,
