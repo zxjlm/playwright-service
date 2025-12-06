@@ -12,7 +12,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from base_proxy import ProxyManager
-from browsers import browser_manager
 from apis.service_router import service_router
 
 

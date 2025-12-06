@@ -15,7 +15,6 @@ from schemas.service_schema import (
     HtmlResponse,
     ScreenshotResponse,
 )
-from base_proxy import ProxyManager
 
 
 class TestUtilsFunctions:

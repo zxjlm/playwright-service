@@ -7,16 +7,9 @@ Unit tests for service_router
 import pytest
 import base64
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
-from httpx import Response
 
-from apis.service_router import service_router
 from schemas.service_schema import (
-    UrlInput,
-    CleanHtmlInput,
-    ScreenshotInput,
     HtmlResponse,
-    CleanHtmlResponse,
     ScreenshotResponse,
 )
 from base_proxy import ProxyManager

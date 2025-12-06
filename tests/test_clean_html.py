@@ -4,7 +4,6 @@
 Unit tests for HTML cleaning functionality
 """
 
-import pytest
 from utils import clean_html_utils
 
 
