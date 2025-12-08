@@ -11,7 +11,7 @@ WORKDIR /app
 COPY ./pyproject.toml ./uv.lock  /app/
 
 RUN uv sync --no-cache --no-dev
-RUN uv run patchright install
+RUN uv run playwright install-deps && uv run patchright install
 
 COPY ./ /app
 
