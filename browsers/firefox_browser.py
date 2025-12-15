@@ -38,32 +38,43 @@ class FirefoxBrowser(BaseBrowser):
             slow_mo: Slow down operations by specified milliseconds
         """
         # Save playwright instance to ensure proper cleanup
-        self.playwright = await async_playwright().start()
+        playwright = await async_playwright().start()
+        self.playwright = playwright
 
-        # Default Firefox user preferences (equivalent to Chromium args where applicable)
-        default_prefs = {
-            "intl.accept_languages": "zh-CN,zh",  # Equivalent to --lang=zh-CN
-            "layout.css.devPixelsPerPx": "1.0",  # Equivalent to --force-device-scale-factor=1
-            "media.navigator.streams.fake": True,  # Equivalent to --use-fake-device-for-media-stream
-            "media.navigator.permission.disabled": True,  # Auto-allow media permissions
-        }
+        try:
+            # Default Firefox user preferences (equivalent to Chromium args where applicable)
+            default_prefs = {
+                "intl.accept_languages": "zh-CN,zh",  # Equivalent to --lang=zh-CN
+                "layout.css.devPixelsPerPx": "1.0",  # Equivalent to --force-device-scale-factor=1
+                "media.navigator.streams.fake": True,  # Equivalent to --use-fake-device-for-media-stream
+                "media.navigator.permission.disabled": True,  # Auto-allow media permissions
+            }
 
-        # Merge default prefs with user-provided prefs
-        user_prefs = kwargs.get("firefox_user_prefs", {})
-        merged_prefs = {**default_prefs, **user_prefs}
+            # Merge default prefs with user-provided prefs
+            user_prefs = kwargs.get("firefox_user_prefs", {})
+            merged_prefs = {**default_prefs, **user_prefs}
 
-        # Default browser arguments for WAF bypass
-        default_args = kwargs.get("args", [])
-        if not default_args:
-            default_args = []
+            # Default browser arguments for WAF bypass
+            default_args = kwargs.get("args", [])
+            if not default_args:
+                default_args = []
 
-        browser = await self.playwright.firefox.launch(
-            headless=kwargs.get("headless", True),
-            args=default_args,
-            firefox_user_prefs=merged_prefs,
-            slow_mo=kwargs.get("slow_mo"),
-        )
-        return browser
+            browser = await playwright.firefox.launch(
+                headless=kwargs.get("headless", True),
+                args=default_args,
+                firefox_user_prefs=merged_prefs,
+                slow_mo=kwargs.get("slow_mo"),
+            )
+            return browser
+        except Exception:
+            # Clean up playwright instance if browser launch fails
+            if self.playwright:
+                try:
+                    await self.playwright.stop()
+                except Exception:
+                    pass  # Ignore cleanup errors
+                self.playwright = None
+            raise
 
     async def create_context(
         self,

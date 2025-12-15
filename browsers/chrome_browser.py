@@ -39,35 +39,46 @@ class ChromeBrowser(BaseBrowser):
              slow_mo: Slow down operations by specified milliseconds
         """
         # Save playwright instance to ensure proper cleanup
-        self.playwright = await async_playwright().start()
+        playwright = await async_playwright().start()
+        self.playwright = playwright
 
-        # Default Chromium arguments optimized for WAF bypass
-        # Key: --disable-blink-features=AutomationControlled is critical for bypassing navigator.webdriver detection
-        default_args = [
-            "--disable-blink-features=AutomationControlled",  # Critical for WAF bypass
-            "--lang=zh-CN",
-            "--accept-lang=zh-CN",
-            "--force-device-scale-factor=1",
-            "--use-fake-device-for-media-stream",
-            "--disable-dev-shm-usage",
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-web-security",
-            "--disable-features=IsolateOrigins,site-per-process",
-        ]
+        try:
+            # Default Chromium arguments optimized for WAF bypass
+            # Key: --disable-blink-features=AutomationControlled is critical for bypassing navigator.webdriver detection
+            default_args = [
+                "--disable-blink-features=AutomationControlled",  # Critical for WAF bypass
+                "--lang=zh-CN",
+                "--accept-lang=zh-CN",
+                "--force-device-scale-factor=1",
+                "--use-fake-device-for-media-stream",
+                "--disable-dev-shm-usage",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-web-security",
+                "--disable-features=IsolateOrigins,site-per-process",
+            ]
 
-        # Merge default args with user-provided args
-        user_args = kwargs.get("args", [])
-        merged_args = default_args + user_args
+            # Merge default args with user-provided args
+            user_args = kwargs.get("args", [])
+            merged_args = default_args + user_args
 
-        browser = await self.playwright.chromium.launch(
-            headless=kwargs.get("headless", False),  # Default to False for better WAF bypass
-            args=merged_args,
-            devtools=kwargs.get("devtools", False),
-            chromium_sandbox=kwargs.get("chromium_sandbox", False),
-            slow_mo=kwargs.get("slow_mo"),
-        )
-        return browser
+            browser = await playwright.chromium.launch(
+                headless=kwargs.get("headless", False),  # Default to False for better WAF bypass
+                args=merged_args,
+                devtools=kwargs.get("devtools", False),
+                chromium_sandbox=kwargs.get("chromium_sandbox", False),
+                slow_mo=kwargs.get("slow_mo"),
+            )
+            return browser
+        except Exception:
+            # Clean up playwright instance if browser launch fails
+            if self.playwright:
+                try:
+                    await self.playwright.stop()
+                except Exception:
+                    pass  # Ignore cleanup errors
+                self.playwright = None
+            raise
 
     async def create_context(
         self,

@@ -37,13 +37,25 @@ class WebKitBrowser(BaseBrowser):
             slow_mo: Slow down operations by specified milliseconds
         """
         # Save playwright instance to ensure proper cleanup
-        self.playwright = await async_playwright().start()
-        browser = await self.playwright.webkit.launch(
-            headless=kwargs.get("headless", True),
-            args=kwargs.get("args", []),
-            slow_mo=kwargs.get("slow_mo"),
-        )
-        return browser
+        playwright = await async_playwright().start()
+        self.playwright = playwright
+
+        try:
+            browser = await playwright.webkit.launch(
+                headless=kwargs.get("headless", True),
+                args=kwargs.get("args", []),
+                slow_mo=kwargs.get("slow_mo"),
+            )
+            return browser
+        except Exception:
+            # Clean up playwright instance if browser launch fails
+            if self.playwright:
+                try:
+                    await self.playwright.stop()
+                except Exception:
+                    pass  # Ignore cleanup errors
+                self.playwright = None
+            raise
 
     async def create_context(
         self,
