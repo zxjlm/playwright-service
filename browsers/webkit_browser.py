@@ -36,8 +36,9 @@ class WebKitBrowser(BaseBrowser):
             args: Additional browser arguments to pass
             slow_mo: Slow down operations by specified milliseconds
         """
-        playwright = await async_playwright().start()
-        browser = await playwright.webkit.launch(
+        # Save playwright instance to ensure proper cleanup
+        self.playwright = await async_playwright().start()
+        browser = await self.playwright.webkit.launch(
             headless=kwargs.get("headless", True),
             args=kwargs.get("args", []),
             slow_mo=kwargs.get("slow_mo"),

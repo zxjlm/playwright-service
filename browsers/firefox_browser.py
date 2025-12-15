@@ -37,7 +37,8 @@ class FirefoxBrowser(BaseBrowser):
             firefox_user_prefs: Firefox user preferences (dict)
             slow_mo: Slow down operations by specified milliseconds
         """
-        playwright = await async_playwright().start()
+        # Save playwright instance to ensure proper cleanup
+        self.playwright = await async_playwright().start()
 
         # Default Firefox user preferences (equivalent to Chromium args where applicable)
         default_prefs = {
@@ -56,7 +57,7 @@ class FirefoxBrowser(BaseBrowser):
         if not default_args:
             default_args = []
 
-        browser = await playwright.firefox.launch(
+        browser = await self.playwright.firefox.launch(
             headless=kwargs.get("headless", True),
             args=default_args,
             firefox_user_prefs=merged_prefs,

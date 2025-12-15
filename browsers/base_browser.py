@@ -11,7 +11,7 @@ All Rights Reserved.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from patchright.async_api import Browser, BrowserContext, Page, ProxySettings
 from loguru import logger
 
@@ -22,6 +22,7 @@ class BaseBrowser(ABC):
     def __init__(self, name: str):
         self.name = name
         self.browser: Optional[Browser] = None
+        self.playwright: Optional[Any] = None  # Playwright instance
         self._is_initialized = False
 
     @staticmethod
@@ -95,12 +96,15 @@ class BaseBrowser(ABC):
         pass
 
     async def close(self):
-        """Close browser"""
+        """Close browser and playwright instance"""
         if self.browser:
             await self.browser.close()
             self.browser = None
-            self._is_initialized = False
-            logger.info(f"{self.name} browser closed")
+        if self.playwright:
+            await self.playwright.stop()
+            self.playwright = None
+        self._is_initialized = False
+        logger.info(f"{self.name} browser closed")
 
     @property
     def is_initialized(self) -> bool:

@@ -38,7 +38,8 @@ class ChromeBrowser(BaseBrowser):
              chromium_sandbox: Enable Chromium sandbox (default: False)
              slow_mo: Slow down operations by specified milliseconds
         """
-        playwright = await async_playwright().start()
+        # Save playwright instance to ensure proper cleanup
+        self.playwright = await async_playwright().start()
 
         # Default Chromium arguments optimized for WAF bypass
         # Key: --disable-blink-features=AutomationControlled is critical for bypassing navigator.webdriver detection
@@ -59,7 +60,7 @@ class ChromeBrowser(BaseBrowser):
         user_args = kwargs.get("args", [])
         merged_args = default_args + user_args
 
-        browser = await playwright.chromium.launch(
+        browser = await self.playwright.chromium.launch(
             headless=kwargs.get("headless", False),  # Default to False for better WAF bypass
             args=merged_args,
             devtools=kwargs.get("devtools", False),
