@@ -13,6 +13,7 @@ import asyncio
 import base64
 import json
 import time
+from typing import Optional
 from loguru import logger
 from patchright.async_api import (
     Page,
@@ -26,6 +27,12 @@ from schemas.service_schema import UrlInput
 from models.request_history_model import RequestHistoryModel
 from config import request_semaphore
 from browsers import browser_manager
+
+
+def _should_reinit_browser(exc: Exception) -> bool:
+    """Detect browser/context closed errors that require reinit."""
+    message = str(exc)
+    return "has been closed" in message or "browser has been closed" in message
 
 
 def get_waiting_requests() -> int:
@@ -93,16 +100,31 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
         proxy_item = ProxySettings(server=proxy) if proxy else None
 
         async with request_semaphore:
+            page: Optional[Page] = None
+            context = None
             logger.info(
                 f"Received request for URL: {url_input.url} using browser: {url_input.browser_type}"
             )
 
-            # Use new browser manager
-            browser_instance = await browser_manager.get_browser(
-                url_input.browser_type, headless=True
-            )
-            context = await browser_instance.create_context(proxy_item)
-            page: Page = await browser_instance.create_page(context)
+            # retry once when browser is stale/closed
+            for attempt in range(2):
+                browser_instance = await browser_manager.get_browser(
+                    url_input.browser_type, headless=True
+                )
+                try:
+                    context = await browser_instance.create_context(proxy_item)
+                    page = await browser_instance.create_page(context)
+                    break
+                except Exception as exc:
+                    if attempt == 0 and _should_reinit_browser(exc):
+                        logger.warning(
+                            f"Browser stale detected, reinitializing {url_input.browser_type}: {exc}"
+                        )
+                        await browser_manager.cleanup_all_browsers()
+                        continue
+                    raise
+            if page is None or context is None:
+                raise RuntimeError("Failed to create browser context/page")
 
             start_time = time.perf_counter()
 
@@ -230,16 +252,31 @@ async def get_html_screenshot(
         proxy_item = ProxySettings(server=proxy) if proxy else None
 
         async with request_semaphore:
+            page: Optional[Page] = None
+            context = None
             logger.info(
                 f"Received screenshot request for URL: {screenshot_input.url} using browser: {screenshot_input.browser_type}"
             )
 
-            # Use new browser manager
-            browser_instance = await browser_manager.get_browser(
-                screenshot_input.browser_type, headless=True
-            )
-            context = await browser_instance.create_context(proxy_item)
-            page: Page = await browser_instance.create_page(context)
+            # retry once when browser is stale/closed
+            for attempt in range(2):
+                browser_instance = await browser_manager.get_browser(
+                    screenshot_input.browser_type, headless=True
+                )
+                try:
+                    context = await browser_instance.create_context(proxy_item)
+                    page = await browser_instance.create_page(context)
+                    break
+                except Exception as exc:
+                    if attempt == 0 and _should_reinit_browser(exc):
+                        logger.warning(
+                            f"Browser stale detected, reinitializing {screenshot_input.browser_type}: {exc}"
+                        )
+                        await browser_manager.cleanup_all_browsers()
+                        continue
+                    raise
+            if page is None or context is None:
+                raise RuntimeError("Failed to create browser context/page")
 
             # Set viewport size for screenshot
             await page.set_viewport_size(
