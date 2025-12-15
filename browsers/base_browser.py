@@ -28,7 +28,7 @@ class BaseBrowser(ABC):
     @staticmethod
     def get_default_waf_headers() -> Dict[str, str]:
         """Get default HTTP headers optimized for WAF bypass
-        
+
         Returns:
             Dictionary of default HTTP headers
         """
@@ -48,7 +48,7 @@ class BaseBrowser(ABC):
     @staticmethod
     def get_default_waf_settings() -> Dict:
         """Get default browser settings optimized for WAF bypass
-        
+
         Returns:
             Dictionary with default viewport, locale, timezone, and geolocation
         """
