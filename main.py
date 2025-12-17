@@ -1,11 +1,22 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request
+from fastapi.responses import Response
 from fastapi_mcp import FastApiMCP
 from loguru import logger
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from browsers import browser_manager
 from apis.service_router import service_router
 from apis.mcp_router import mcp_router
+from apis.metrics import (
+    http_requests_total,
+    http_request_duration_seconds,
+    http_request_size_bytes,
+    http_response_size_bytes,
+    http_requests_in_flight,
+    get_metrics_response,
+)
 
 
 @asynccontextmanager
@@ -24,6 +35,85 @@ async def shutdown_browsers():
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+class PrometheusMiddleware(BaseHTTPMiddleware):
+    """Prometheus metrics collection middleware"""
+
+    async def dispatch(self, request: Request, call_next):
+        # 跳过 metrics 端点本身
+        if request.url.path == "/metrics":
+            return await call_next(request)
+
+        method = request.method
+        path = request.url.path
+
+        # 估算请求大小（从 headers 获取 Content-Length，如果没有则设为 0）
+        request_size = 0
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                request_size = int(content_length)
+            except ValueError:
+                request_size = 0
+
+        # 增加活跃请求数
+        http_requests_in_flight.labels(method=method, path=path).inc()
+
+        start_time = time.perf_counter()
+        status_code = 500
+
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+
+            # 记录响应大小（从 headers 获取 Content-Length）
+            response_size = 0
+            content_length = response.headers.get("content-length")
+            if content_length:
+                try:
+                    response_size = int(content_length)
+                except ValueError:
+                    response_size = 0
+
+            # 记录响应大小指标
+            http_response_size_bytes.labels(
+                method=method, path=path, status_code=status_code
+            ).observe(response_size)
+
+            return response
+        except Exception as e:
+            logger.exception(f"Error in request: {e}")
+            status_code = 500
+            raise
+        finally:
+            # 计算请求持续时间
+            duration = time.perf_counter() - start_time
+
+            # 减少活跃请求数
+            http_requests_in_flight.labels(method=method, path=path).dec()
+
+            # 记录指标
+            http_requests_total.labels(
+                method=method, path=path, status_code=status_code
+            ).inc()
+            http_request_duration_seconds.labels(method=method, path=path).observe(
+                duration
+            )
+            http_request_size_bytes.labels(method=method, path=path).observe(
+                request_size
+            )
+
+
+# 添加 Prometheus 中间件
+app.add_middleware(PrometheusMiddleware)
+
+# 添加 metrics 端点
+@app.get("/metrics")
+async def metrics(request: Request) -> Response:
+    """Prometheus metrics endpoint"""
+    return get_metrics_response(request)
+
 
 mcp = FastApiMCP(
     app,

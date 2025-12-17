@@ -17,6 +17,7 @@ dependencies = [
     "markdownify>=1.2.0",
     "patchright>=1.56.0",
     "playwright==1.54.0",
+    "prometheus-client>=0.23.1",
     "pydantic-settings>=2.10.1",
     "requests>=2.32.3",
     "sqlmodel>=0.0.24",
