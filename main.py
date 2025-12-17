@@ -1,9 +1,9 @@
 from contextlib import asynccontextmanager
 import time
 from fastapi import FastAPI, Request
-from fastapi.responses import Response
 from fastapi_mcp import FastApiMCP
 from loguru import logger
+from prometheus_client import make_asgi_app
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from browsers import browser_manager
@@ -15,7 +15,6 @@ from apis.metrics import (
     http_request_size_bytes,
     http_response_size_bytes,
     http_requests_in_flight,
-    get_metrics_response,
 )
 
 
@@ -108,11 +107,9 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
 # 添加 Prometheus 中间件
 app.add_middleware(PrometheusMiddleware)
 
-# 添加 metrics 端点
-@app.get("/metrics")
-async def metrics(request: Request) -> Response:
-    """Prometheus metrics endpoint"""
-    return get_metrics_response(request)
+# 使用 Prometheus 官方提供的 ASGI 应用挂载 /metrics
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 
 mcp = FastApiMCP(

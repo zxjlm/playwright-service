@@ -14,15 +14,7 @@ from prometheus_client import (
     Counter,
     Histogram,
     Gauge,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
-    REGISTRY,
 )
-from prometheus_client.openmetrics.exposition import (
-    generate_latest as generate_latest_openmetrics,
-)
-from fastapi import Response
-from starlette.requests import Request
 
 
 # ============================================================================
@@ -196,23 +188,3 @@ browser_reinitializations_total = Counter(
     "Total number of browser reinitializations",
     ["browser_type"],
 )
-
-
-# ============================================================================
-# 工具函数
-# ============================================================================
-
-
-def get_metrics_response(request: Request) -> Response:
-    """生成 Prometheus metrics 响应"""
-    # 检查是否请求 OpenMetrics 格式
-    accept_header = request.headers.get("Accept", "")
-    if "application/openmetrics-text" in accept_header:
-        # OpenMetrics 版本需要显式传入 registry
-        output = generate_latest_openmetrics(REGISTRY)
-        content_type = "application/openmetrics-text; version=1.0.0; charset=utf-8"
-    else:
-        output = generate_latest()
-        content_type = CONTENT_TYPE_LATEST
-
-    return Response(content=output, media_type=content_type)
