@@ -24,7 +24,7 @@ from prometheus_client import (
 # HTTP 请求总数计数器
 # 标签: method (HTTP方法), path (请求路径), status_code (HTTP状态码)
 http_requests_total = Counter(
-    "http_requests_total",
+    "api_requests_total",
     "Total number of HTTP requests",
     ["method", "path", "status_code"],
 )
@@ -33,7 +33,7 @@ http_requests_total = Counter(
 # 标签: method (HTTP方法), path (请求路径)
 # 单位: 秒
 http_request_duration_seconds = Histogram(
-    "http_request_duration_seconds",
+    "api_request_duration_seconds",
     "HTTP request duration in seconds",
     ["method", "path"],
     buckets=(0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0),
@@ -43,7 +43,7 @@ http_request_duration_seconds = Histogram(
 # 标签: method (HTTP方法), path (请求路径)
 # 单位: 字节
 http_request_size_bytes = Histogram(
-    "http_request_size_bytes",
+    "api_request_size_bytes",
     "HTTP request size in bytes",
     ["method", "path"],
     buckets=(100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000),
@@ -53,7 +53,7 @@ http_request_size_bytes = Histogram(
 # 标签: method (HTTP方法), path (请求路径), status_code (HTTP状态码)
 # 单位: 字节
 http_response_size_bytes = Histogram(
-    "http_response_size_bytes",
+    "api_request_size_bytes",
     "HTTP response size in bytes",
     ["method", "path", "status_code"],
     buckets=(100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000),
@@ -62,7 +62,7 @@ http_response_size_bytes = Histogram(
 # 当前活跃的 HTTP 请求数
 # 标签: method (HTTP方法), path (请求路径)
 http_requests_in_flight = Gauge(
-    "http_requests_in_flight",
+    "api_request_size_bytes",
     "Current number of HTTP requests being processed",
     ["method", "path"],
 )
@@ -163,7 +163,7 @@ proxy_failures_total = Counter(
 # 错误总数计数器
 # 标签: error_type (错误类型: timeout/browser_error/proxy_error/other)
 errors_total = Counter(
-    "errors_total",
+    "api_errors_total",
     "Total number of errors",
     ["error_type"],
 )
