@@ -17,6 +17,7 @@ from typing import Optional
 from loguru import logger
 from patchright.async_api import (
     Page,
+    Response,
     TimeoutError as PWTimeoutError,
     ProxySettings,
 )
@@ -27,6 +28,7 @@ from schemas.service_schema import UrlInput
 from models.request_history_model import RequestHistoryModel
 from config import request_semaphore, service_config
 from browsers import browser_manager
+from encoding_utils import decode_html_content, fix_garbled_html
 from apis.metrics import (
     browser_operations_total,
     browser_operation_duration_seconds,
@@ -59,8 +61,45 @@ def get_waiting_requests() -> int:
         return 0
 
 
+async def get_content_with_encoding(
+    page: Page, response: Response, url: str
+) -> tuple[str, str]:
+    """
+    Get page content with proper encoding handling.
+    
+    This function tries to get the correct encoding from the response
+    and decodes the content properly, which is important for non-UTF-8 
+    websites (e.g., Chinese government websites using GBK/GB2312).
+    
+    Args:
+        page: Playwright page object
+        response: Playwright response object
+        url: The URL being accessed
+        
+    Returns:
+        Tuple of (html_content, encoding_used)
+    """
+    # Try to get raw response body and decode with proper encoding
+    try:
+        body = await response.body()
+        content_type = response.headers.get("content-type", "")
+        html_content, encoding = decode_html_content(body, content_type)
+        logger.debug(f"Decoded content with encoding: {encoding}, url: {url}")
+        return html_content, encoding
+    except Exception as e:
+        logger.debug(f"Failed to get response body, falling back to page.content(): {e}")
+    
+    # Fallback to page.content() and try to fix if garbled
+    html_content = await page.content()
+    
+    # Check if content appears garbled and try to fix
+    html_content = fix_garbled_html(html_content)
+    
+    return html_content, "utf-8"
+
+
 async def force_get_content(
-    page: Page, url: str
+    page: Page, url: str, response: Optional[Response] = None
 ) -> tuple[str | None, Exception | None]:
     html_content = None
     last_error = None
@@ -74,7 +113,14 @@ async def force_get_content(
                 await page.wait_for_load_state("domcontentloaded", timeout=2000)
             except Exception:
                 pass  # ignore the timeout error, continue to try to get the content
-            html_content = await page.content()
+            
+            # Use encoding-aware content retrieval if response is available
+            if response:
+                html_content, _ = await get_content_with_encoding(page, response, url)
+            else:
+                html_content = await page.content()
+                html_content = fix_garbled_html(html_content)
+            
             if html_content and len(html_content) > 5000:
                 break
         except Exception as retry_e:
@@ -194,8 +240,15 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                     logger.warning(f"Page load timeout: {e_}, {url_input.url}")
                     pass  # ignore the timeout error
 
-                response_body = html = await page.content()
-                logger.debug(f"Page closed successfully: {url_input.url}")
+                # Use encoding-aware content retrieval for proper handling of 
+                # non-UTF-8 websites (e.g., Chinese government sites using GBK)
+                html, encoding = await get_content_with_encoding(
+                    page, response, str(url_input.url)
+                )
+                response_body = html
+                logger.debug(
+                    f"Page content retrieved successfully with encoding {encoding}: {url_input.url}"
+                )
 
                 response_headers = json.dumps(response.headers)
                 request_headers = json.dumps(response.request.headers)
@@ -219,7 +272,7 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                 if url_input.is_force_get_content:
                     try:
                         html_content, last_error = await force_get_content(
-                            page, url_input.url
+                            page, url_input.url, response=None
                         )
                         if html_content and len(html_content) > 5000:
                             result = HtmlResponse(
