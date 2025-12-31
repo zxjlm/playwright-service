@@ -15,7 +15,9 @@ import typing
 from pydantic import BaseModel, Field, HttpUrl
 
 
-class UrlInput(BaseModel):
+class BaseBrowserInput(BaseModel):
+    """Base class for browser input parameters shared by HTML and Screenshot operations."""
+
     url: HttpUrl
     browser_type: typing.Literal["chrome", "firefox", "webkit"] = Field(
         default="chrome"
@@ -29,6 +31,9 @@ class UrlInput(BaseModel):
         default=0,
         description="force get content from url, ignore the error of wait_until",
     )
+
+
+class UrlInput(BaseBrowserInput):
     use_cache: int = Field(
         default=0,
         description="use cache to get content from url. ATTENTION: the cache is only base on the url and browser type, which means if you give a longer timeout, but the content may be different because of the cached is old. So i make the cache parameter default to 0, you can set it to 1 if you want to use cache.",
@@ -68,23 +73,10 @@ class CleanHtmlResponse(BaseModel):
     html: str
 
 
-class ScreenshotInput(BaseModel):
+class ScreenshotInput(BaseBrowserInput):
     width: int = Field(default=1920)
     height: int = Field(default=1080)
     full_page: int = Field(default=0)
-    url: HttpUrl
-    browser_type: typing.Literal["chrome", "firefox", "webkit"] = Field(
-        default="chrome"
-    )
-    headers: dict = Field(default_factory=dict)
-    timeout: int = Field(default=10000, ge=1000, le=100000)
-    wait_until: typing.Literal["domcontentloaded", "networkidle", "load", "commit"] = (
-        Field(default="domcontentloaded")
-    )
-    is_force_get_content: int = Field(
-        default=0,
-        description="force get content from url, ignore the error of wait_until",
-    )
 
 
 class ScreenshotResponse(BaseModel):
