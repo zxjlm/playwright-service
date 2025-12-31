@@ -53,7 +53,7 @@ http_request_size_bytes = Histogram(
 # 标签: method (HTTP方法), path (请求路径), status_code (HTTP状态码)
 # 单位: 字节
 http_response_size_bytes = Histogram(
-    "api_request_size_bytes",
+    "api_response_size_bytes",
     "HTTP response size in bytes",
     ["method", "path", "status_code"],
     buckets=(100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000),
@@ -62,7 +62,7 @@ http_response_size_bytes = Histogram(
 # 当前活跃的 HTTP 请求数
 # 标签: method (HTTP方法), path (请求路径)
 http_requests_in_flight = Gauge(
-    "api_request_size_bytes",
+    "api_requests_in_flight",
     "Current number of HTTP requests being processed",
     ["method", "path"],
 )
