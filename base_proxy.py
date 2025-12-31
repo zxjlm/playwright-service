@@ -62,9 +62,6 @@ def is_proxy_error(error: Exception) -> tuple[bool, str]:
                 return True, "connection_refused"
             else:
                 return True, "other"
-    else:
-        # 保守策略, 由于当前对于代理异常的收集并不完善, 所以所有的异常都会进行代理轮换
-        return True, "unknown"
     return False, ""
 
 
