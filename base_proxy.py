@@ -36,6 +36,7 @@ IS_ADVANCED_URLLIB3 = (
 PROXY_ERROR_PATTERNS = [
     "net::ERR_TUNNEL_CONNECTION_FAILED",
     "NS_ERROR_PROXY_CONNECTION_REFUSED",
+    "NS_ERROR_NET_EMPTY_RESPONSE",
     "ERR_PROXY_CONNECTION_FAILED",
     "Proxy connection refused",
     "Could not connect to proxy",
