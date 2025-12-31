@@ -155,6 +155,39 @@ proxy_failures_total = Counter(
     "Total number of proxy acquisition failures",
 )
 
+# 代理复用统计直方图
+# 记录每个代理被复用的次数，用于评估代理池质量
+# 标签: proxy_type (代理类型: dynamic/static)
+proxy_reuse_count = Histogram(
+    "proxy_reuse_count",
+    "Number of times a proxy was reused before failure",
+    ["proxy_type"],
+    buckets=(1, 2, 3, 5, 10, 20, 50, 100, 200, 500, 1000),
+)
+
+# 代理切换计数器
+# 标签: reason (切换原因: tunnel_failed/connection_refused/other)
+proxy_switch_total = Counter(
+    "proxy_switch_total",
+    "Total number of proxy switches due to errors",
+    ["reason"],
+)
+
+# 代理重试计数器
+# 标签: attempt (重试次数: 1/2/3)
+proxy_retry_total = Counter(
+    "proxy_retry_total",
+    "Total number of proxy retry attempts",
+    ["attempt"],
+)
+
+# 当前活跃代理的复用次数
+# 用于实时监控当前代理的使用情况
+proxy_current_reuse_count = Gauge(
+    "proxy_current_reuse_count",
+    "Current reuse count of the active proxy",
+)
+
 
 # ============================================================================
 # 错误指标
