@@ -60,6 +60,8 @@ def is_proxy_error(error: Exception) -> tuple[bool, str]:
                 return True, "tunnel_failed"
             elif "REFUSED" in pattern or "refused" in pattern.lower():
                 return True, "connection_refused"
+            elif "Proxy" in error_str.upper():
+                return True, f"other proxy_error: {error_str}"
             else:
                 return True, "other"
     return False, ""
