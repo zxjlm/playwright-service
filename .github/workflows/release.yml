@@ -41,15 +41,19 @@ jobs:
             type=semver,pattern={{major}}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Use GitHub Actions cache for Docker layers
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Enable BuildKit inline cache for better layer reuse
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
 
       - name: Output image info
         run: |
