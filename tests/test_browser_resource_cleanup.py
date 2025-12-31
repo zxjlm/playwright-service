@@ -8,7 +8,7 @@ when browser initialization fails, preventing resource leaks.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, patch
 from patchright.async_api import Browser
 
 from browsers.chrome_browser import ChromeBrowser

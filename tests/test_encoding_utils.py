@@ -4,7 +4,6 @@
 Unit tests for encoding utilities
 """
 
-import pytest
 from encoding_utils import (
     detect_charset_from_content_type,
     detect_charset_from_html,

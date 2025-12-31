@@ -176,7 +176,7 @@ class TestServiceRouter:
     ):
         """Test successful screenshot retrieval"""
         with (
-            patch("apis.service_router.browser_manager") as mock_bm,
+            patch("apis.service_router.browser_manager"),
             patch("apis.utils.ProxyManager") as mock_pm_class,
             patch("apis.service_router.get_html_screenshot") as mock_screenshot,
         ):

@@ -6,7 +6,7 @@ Unit tests for utils module
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from playwright.async_api import TimeoutError as PWTimeoutError
+from patchright.async_api import TimeoutError as PWTimeoutError
 
 from apis.utils import get_html_base, get_html_screenshot, get_waiting_requests
 from schemas.service_schema import (
@@ -96,7 +96,8 @@ class TestUtilsFunctions:
 
             # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
-            mock_semaphore.__aexit__ = AsyncMock()
+            # Ensure exceptions inside the context are not suppressed.
+            mock_semaphore.__aexit__ = AsyncMock(return_value=False)
 
             # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
@@ -170,7 +171,8 @@ class TestUtilsFunctions:
 
             # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
-            mock_semaphore.__aexit__ = AsyncMock()
+            # Ensure exceptions inside the context are not suppressed.
+            mock_semaphore.__aexit__ = AsyncMock(return_value=False)
 
             # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
@@ -221,7 +223,8 @@ class TestUtilsFunctions:
 
             # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
-            mock_semaphore.__aexit__ = AsyncMock()
+            # Ensure exceptions inside the context are not suppressed.
+            mock_semaphore.__aexit__ = AsyncMock(return_value=False)
 
             # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
@@ -360,6 +363,7 @@ class TestUtilsFunctions:
         with (
             patch("apis.utils.request_semaphore") as mock_semaphore,
             patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
@@ -372,11 +376,16 @@ class TestUtilsFunctions:
 
             # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
-            mock_semaphore.__aexit__ = AsyncMock()
+            # Ensure exceptions inside the context are not suppressed.
+            mock_semaphore.__aexit__ = AsyncMock(return_value=False)
 
             # Mock request history model
             mock_model.get_request_history = AsyncMock(return_value=None)
             mock_model.create_request_history = AsyncMock()
+
+            # Force a general failure outside the inner page navigation try/except
+            # so `get_html_base` returns the outer "request failed" (603) response.
+            mock_bm.get_browser = AsyncMock(side_effect=Exception("Browser error"))
 
             result = await get_html_base(url_input, mock_session)
 
