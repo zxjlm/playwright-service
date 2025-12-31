@@ -271,32 +271,40 @@ async def create_encoding_route_handler(page) -> None:
     """
     Set up a route handler on a Playwright page to fix encoding issues.
     
-    This intercepts HTML responses and ensures the Content-Type header
+    This intercepts HTML document responses and ensures the Content-Type header
     includes the correct charset, so the browser renders the page correctly.
     This is essential for:
     1. Correct page rendering (for screenshots)
     2. Correct page.content() output
+    
+    Only intercepts document requests (main HTML), not other resources like
+    images, CSS, JS, etc. to avoid interfering with normal page loading.
     
     Args:
         page: Playwright Page object
     """
     async def handle_route(route):
         """Route handler that fixes encoding in HTML responses."""
+        request = route.request
+        
+        # Only intercept document requests (main HTML page)
+        # Skip all other resources (images, stylesheets, scripts, etc.)
+        if request.resource_type != "document":
+            await route.continue_()
+            return
+        
         try:
-            # Fetch the original response
+            # Fetch the original response for document requests only
             response = await route.fetch()
             
             # Get response headers and body
             headers = dict(response.headers)
             content_type = headers.get("content-type", "")
             
-            # Only process HTML responses
+            # Verify it's actually HTML content
             if "text/html" not in content_type.lower():
                 await route.fulfill(response=response)
                 return
-            
-            # Get the response body
-            body = await response.body()
             
             # Check if charset is already specified in Content-Type
             existing_charset = detect_charset_from_content_type(content_type)
@@ -306,12 +314,18 @@ async def create_encoding_route_handler(page) -> None:
                 await route.fulfill(response=response)
                 return
             
+            # Get the response body to detect charset from HTML meta tags
+            body = await response.body()
+            
             # Detect charset from HTML content
             detected_charset = detect_charset_from_html(body)
             
             if detected_charset and detected_charset != "utf-8":
                 # Found non-UTF-8 charset in HTML, need to fix the response
-                logger.debug(f"Detected charset {detected_charset} in HTML, fixing Content-Type header")
+                logger.debug(
+                    f"Detected charset {detected_charset} in HTML, "
+                    f"transcoding to UTF-8 for URL: {request.url}"
+                )
                 
                 # Decode the body with the correct encoding
                 try:
@@ -338,5 +352,5 @@ async def create_encoding_route_handler(page) -> None:
             logger.debug(f"Route handler error, continuing with original request: {e}")
             await route.continue_()
     
-    # Set up the route to intercept all HTML document requests
+    # Set up the route to intercept all requests, but only process documents
     await page.route("**/*", handle_route)
