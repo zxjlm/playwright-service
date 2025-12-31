@@ -6,7 +6,13 @@
 @Create Time: 2025-12-31
 @Software: Visual Studio Code
 @Copyright: Copyright (c) 2025, harumonia
-@Description: Encoding utilities for handling non-UTF-8 encoded web pages
+@Description: Encoding utilities for handling non-UTF-8 encoded web pages.
+
+This module provides functions to:
+1. Detect charset from HTTP headers and HTML content
+2. Intercept and fix encoding in Playwright responses (for correct page rendering)
+3. Decode HTML content with proper encoding
+
 All Rights Reserved.
 """
 
@@ -259,3 +265,78 @@ def fix_garbled_html(html: str, original_bytes: Optional[bytes] = None) -> str:
         pass
     
     return html
+
+
+async def create_encoding_route_handler(page) -> None:
+    """
+    Set up a route handler on a Playwright page to fix encoding issues.
+    
+    This intercepts HTML responses and ensures the Content-Type header
+    includes the correct charset, so the browser renders the page correctly.
+    This is essential for:
+    1. Correct page rendering (for screenshots)
+    2. Correct page.content() output
+    
+    Args:
+        page: Playwright Page object
+    """
+    async def handle_route(route):
+        """Route handler that fixes encoding in HTML responses."""
+        try:
+            # Fetch the original response
+            response = await route.fetch()
+            
+            # Get response headers and body
+            headers = dict(response.headers)
+            content_type = headers.get("content-type", "")
+            
+            # Only process HTML responses
+            if "text/html" not in content_type.lower():
+                await route.fulfill(response=response)
+                return
+            
+            # Get the response body
+            body = await response.body()
+            
+            # Check if charset is already specified in Content-Type
+            existing_charset = detect_charset_from_content_type(content_type)
+            
+            if existing_charset:
+                # Charset already specified, just fulfill with original response
+                await route.fulfill(response=response)
+                return
+            
+            # Detect charset from HTML content
+            detected_charset = detect_charset_from_html(body)
+            
+            if detected_charset and detected_charset != "utf-8":
+                # Found non-UTF-8 charset in HTML, need to fix the response
+                logger.debug(f"Detected charset {detected_charset} in HTML, fixing Content-Type header")
+                
+                # Decode the body with the correct encoding
+                try:
+                    decoded_content = body.decode(detected_charset)
+                    # Re-encode as UTF-8 for the browser
+                    utf8_body = decoded_content.encode("utf-8")
+                    
+                    # Update Content-Type header to UTF-8
+                    headers["content-type"] = "text/html; charset=utf-8"
+                    
+                    await route.fulfill(
+                        status=response.status,
+                        headers=headers,
+                        body=utf8_body,
+                    )
+                    return
+                except Exception as e:
+                    logger.debug(f"Failed to transcode content: {e}")
+            
+            # No charset detected or it's UTF-8, fulfill with original response
+            await route.fulfill(response=response)
+            
+        except Exception as e:
+            logger.debug(f"Route handler error, continuing with original request: {e}")
+            await route.continue_()
+    
+    # Set up the route to intercept all HTML document requests
+    await page.route("**/*", handle_route)

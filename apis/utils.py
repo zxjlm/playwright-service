@@ -28,7 +28,11 @@ from schemas.service_schema import UrlInput
 from models.request_history_model import RequestHistoryModel
 from config import request_semaphore, service_config
 from browsers import browser_manager
-from encoding_utils import decode_html_content, fix_garbled_html
+from encoding_utils import (
+    decode_html_content,
+    fix_garbled_html,
+    create_encoding_route_handler,
+)
 from apis.metrics import (
     browser_operations_total,
     browser_operation_duration_seconds,
@@ -220,6 +224,11 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
 
             try:
                 logger.debug(f"Created new {url_input.browser_type} page")
+                
+                # Set up encoding route handler to fix non-UTF-8 encoded pages
+                # This ensures pages using GBK/GB2312 are rendered correctly
+                await create_encoding_route_handler(page)
+                
                 if url_input.headers:
                     await page.set_extra_http_headers(url_input.headers)
 
@@ -456,6 +465,11 @@ async def get_html_screenshot(
                 logger.debug(
                     f"Created new {screenshot_input.browser_type} page for screenshot"
                 )
+                
+                # Set up encoding route handler to fix non-UTF-8 encoded pages
+                # This ensures pages using GBK/GB2312 are rendered correctly for screenshots
+                await create_encoding_route_handler(page)
+                
                 if screenshot_input.headers:
                     await page.set_extra_http_headers(screenshot_input.headers)
 
