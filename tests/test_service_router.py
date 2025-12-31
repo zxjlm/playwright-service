@@ -12,7 +12,7 @@ from schemas.service_schema import (
     HtmlResponse,
     ScreenshotResponse,
 )
-from base_proxy import ProxyManager
+from base_proxy import ProxyManager, ProxyPool, is_proxy_error, CachedProxy
 
 
 class TestServiceRouter:
@@ -30,7 +30,7 @@ class TestServiceRouter:
         """Test successful HTML content retrieval"""
         with (
             patch("apis.service_router.browser_manager", mock_browser_manager),
-            patch("apis.utils.ProxyManager", return_value=mock_proxy_manager),
+            patch("apis.utils.proxy_pool", mock_proxy_manager),
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
@@ -54,16 +54,14 @@ class TestServiceRouter:
         """Test HTML retrieval with proxy"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -177,16 +175,14 @@ class TestServiceRouter:
         """Test successful screenshot retrieval"""
         with (
             patch("apis.service_router.browser_manager"),
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.service_router.get_html_screenshot") as mock_screenshot,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock successful response
             mock_response = ScreenshotResponse(
@@ -340,16 +336,14 @@ class TestIntegrationComparison:
         """Test HTML content comparison functionality"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -376,7 +370,7 @@ class TestIntegrationComparison:
             assert "Proxy" in data1["html"]
 
             # Second request (without proxy)
-            mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
+            mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
             mock_get_html.return_value = mock_response_without_proxy
             response2 = client.post("/service/html", json=sample_url_input)
             assert response2.status_code == 200
@@ -390,16 +384,14 @@ class TestIntegrationComparison:
         """Test screenshot comparison functionality"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.service_router.get_html_screenshot") as mock_screenshot,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -438,16 +430,14 @@ class TestIntegrationComparison:
         """Test error handling comparison"""
         with (
             patch("apis.service_router.browser_manager") as mock_bm,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.service_router.get_html_base") as mock_get_html,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -486,3 +476,210 @@ class TestIntegrationComparison:
             # Verify error types are different
             assert data1["page_status_code"] != data2["page_status_code"]
             assert data1["page_error"] != data2["page_error"]
+
+
+class TestProxyErrorDetection:
+    """Tests for proxy error detection and handling"""
+
+    def test_is_proxy_error_tunnel_failed(self):
+        """Test detection of tunnel connection failed error"""
+        error = Exception("net::ERR_TUNNEL_CONNECTION_FAILED")
+        is_error, reason = is_proxy_error(error)
+        assert is_error is True
+        assert reason == "tunnel_failed"
+
+    def test_is_proxy_error_connection_refused(self):
+        """Test detection of proxy connection refused error"""
+        error = Exception("NS_ERROR_PROXY_CONNECTION_REFUSED")
+        is_error, reason = is_proxy_error(error)
+        assert is_error is True
+        assert reason == "connection_refused"
+
+    def test_is_proxy_error_proxy_failed(self):
+        """Test detection of proxy connection failed error"""
+        error = Exception("ERR_PROXY_CONNECTION_FAILED")
+        is_error, reason = is_proxy_error(error)
+        assert is_error is True
+        assert reason == "other"
+
+    def test_is_proxy_error_not_proxy_error(self):
+        """Test non-proxy errors are not detected as proxy errors"""
+        error = Exception("Some other error")
+        is_error, reason = is_proxy_error(error)
+        assert is_error is False
+        assert reason == ""
+
+    def test_is_proxy_error_timeout(self):
+        """Test timeout errors are not detected as proxy errors"""
+        error = Exception("Timeout waiting for page")
+        is_error, reason = is_proxy_error(error)
+        assert is_error is False
+        assert reason == ""
+
+
+class TestCachedProxy:
+    """Tests for CachedProxy dataclass"""
+
+    def test_cached_proxy_creation(self):
+        """Test CachedProxy creation"""
+        proxy = CachedProxy(
+            server="http://127.0.0.1:8080",
+            proxy_type="dynamic",
+        )
+        assert proxy.server == "http://127.0.0.1:8080"
+        assert proxy.proxy_type == "dynamic"
+        assert proxy.reuse_count == 0
+
+    def test_cached_proxy_increment_reuse(self):
+        """Test incrementing reuse count"""
+        proxy = CachedProxy(
+            server="http://127.0.0.1:8080",
+            proxy_type="dynamic",
+        )
+        count1 = proxy.increment_reuse()
+        assert count1 == 1
+        count2 = proxy.increment_reuse()
+        assert count2 == 2
+        count3 = proxy.increment_reuse()
+        assert count3 == 3
+
+
+class TestProxyPool:
+    """Tests for ProxyPool singleton"""
+
+    @pytest.mark.asyncio
+    async def test_proxy_pool_get_proxy_new(self):
+        """Test getting a new proxy from pool"""
+        with patch("base_proxy.ProxyManager") as mock_pm_class:
+            mock_pm = MagicMock()
+            mock_pm.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
+            mock_pm.proxy_type = "dynamic"
+            mock_pm_class.return_value = mock_pm
+
+            # Create a new ProxyPool instance for testing
+            pool = ProxyPool.__new__(ProxyPool)
+            pool._initialized = False
+            pool.__init__()
+            pool._proxy_manager = mock_pm
+            pool._cached_proxy = None
+
+            proxy = await pool.get_proxy()
+
+            assert proxy == "http://127.0.0.1:8080"
+            assert pool._cached_proxy is not None
+            assert pool._cached_proxy.server == "http://127.0.0.1:8080"
+
+    @pytest.mark.asyncio
+    async def test_proxy_pool_reuse_cached_proxy(self):
+        """Test reusing cached proxy"""
+        with patch("base_proxy.ProxyManager") as mock_pm_class:
+            mock_pm = MagicMock()
+            mock_pm.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
+            mock_pm.proxy_type = "dynamic"
+            mock_pm_class.return_value = mock_pm
+
+            pool = ProxyPool.__new__(ProxyPool)
+            pool._initialized = False
+            pool.__init__()
+            pool._proxy_manager = mock_pm
+            pool._cached_proxy = CachedProxy(
+                server="http://cached:8080",
+                proxy_type="dynamic",
+                reuse_count=5,
+            )
+
+            proxy = await pool.get_proxy(force_refresh=False)
+
+            assert proxy == "http://cached:8080"
+            assert pool._cached_proxy.reuse_count == 6
+            # get_proxy should not have been called since we have a cached proxy
+            mock_pm.get_proxy.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_proxy_pool_force_refresh(self):
+        """Test forcing proxy refresh"""
+        with patch("base_proxy.ProxyManager") as mock_pm_class:
+            mock_pm = MagicMock()
+            mock_pm.get_proxy = AsyncMock(return_value="http://new:8080")
+            mock_pm.proxy_type = "dynamic"
+            mock_pm_class.return_value = mock_pm
+
+            pool = ProxyPool.__new__(ProxyPool)
+            pool._initialized = False
+            pool.__init__()
+            pool._proxy_manager = mock_pm
+            pool._cached_proxy = CachedProxy(
+                server="http://cached:8080",
+                proxy_type="dynamic",
+                reuse_count=5,
+            )
+
+            proxy = await pool.get_proxy(force_refresh=True)
+
+            assert proxy == "http://new:8080"
+            mock_pm.get_proxy.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_proxy_pool_invalidate_proxy(self):
+        """Test invalidating proxy"""
+        with patch("base_proxy.ProxyManager") as mock_pm_class:
+            mock_pm = MagicMock()
+            mock_pm.proxy_type = "dynamic"
+            mock_pm_class.return_value = mock_pm
+
+            pool = ProxyPool.__new__(ProxyPool)
+            pool._initialized = False
+            pool.__init__()
+            pool._proxy_manager = mock_pm
+            pool._cached_proxy = CachedProxy(
+                server="http://bad:8080",
+                proxy_type="dynamic",
+                reuse_count=3,
+            )
+
+            await pool.invalidate_proxy(reason="tunnel_failed")
+
+            assert pool._cached_proxy is None
+
+    def test_proxy_pool_current_proxy(self):
+        """Test getting current proxy"""
+        pool = ProxyPool.__new__(ProxyPool)
+        pool._initialized = False
+        pool.__init__()
+        pool._cached_proxy = CachedProxy(
+            server="http://test:8080",
+            proxy_type="static",
+        )
+
+        assert pool.current_proxy == "http://test:8080"
+
+    def test_proxy_pool_current_proxy_none(self):
+        """Test getting current proxy when none cached"""
+        pool = ProxyPool.__new__(ProxyPool)
+        pool._initialized = False
+        pool.__init__()
+        pool._cached_proxy = None
+
+        assert pool.current_proxy is None
+
+    def test_proxy_pool_current_reuse_count(self):
+        """Test getting current reuse count"""
+        pool = ProxyPool.__new__(ProxyPool)
+        pool._initialized = False
+        pool.__init__()
+        pool._cached_proxy = CachedProxy(
+            server="http://test:8080",
+            proxy_type="dynamic",
+            reuse_count=10,
+        )
+
+        assert pool.current_reuse_count == 10
+
+    def test_proxy_pool_current_reuse_count_none(self):
+        """Test getting current reuse count when none cached"""
+        pool = ProxyPool.__new__(ProxyPool)
+        pool._initialized = False
+        pool.__init__()
+        pool._cached_proxy = None
+
+        assert pool.current_reuse_count == 0

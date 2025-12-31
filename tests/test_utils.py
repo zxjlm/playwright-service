@@ -59,17 +59,15 @@ class TestUtilsFunctions:
 
         with (
             patch("apis.utils.request_semaphore") as mock_semaphore,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -145,15 +143,13 @@ class TestUtilsFunctions:
 
         with (
             patch("apis.utils.request_semaphore") as mock_semaphore,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
-            mock_pm_class.return_value = mock_proxy_manager
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -194,15 +190,13 @@ class TestUtilsFunctions:
 
         with (
             patch("apis.utils.request_semaphore") as mock_semaphore,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
-            mock_pm_class.return_value = mock_proxy_manager
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -246,17 +240,15 @@ class TestUtilsFunctions:
 
         with (
             patch("apis.utils.request_semaphore") as mock_semaphore,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(
                 return_value="http://127.0.0.1:8080"
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -307,15 +299,13 @@ class TestUtilsFunctions:
 
         with (
             patch("apis.utils.request_semaphore") as mock_semaphore,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # Mock proxy manager
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(return_value=None)
-            mock_pm_class.return_value = mock_proxy_manager
+            # Mock proxy pool
+            mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -362,17 +352,15 @@ class TestUtilsFunctions:
 
         with (
             patch("apis.utils.request_semaphore") as mock_semaphore,
-            patch("apis.utils.ProxyManager") as mock_pm_class,
+            patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
         ):
 
-            # Mock proxy manager raising exception
-            mock_proxy_manager = MagicMock()
-            mock_proxy_manager.get_proxy = AsyncMock(
+            # Mock proxy pool raising exception
+            mock_proxy_pool.get_proxy = AsyncMock(
                 side_effect=Exception("Proxy error")
             )
-            mock_pm_class.return_value = mock_proxy_manager
 
             # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()
