@@ -322,6 +322,9 @@ async def navigate_page(
         session.request_headers = json.dumps(response.request.headers)
 
         return response
+    except PWTimeoutError as e:
+        # logger.warning(f"Page load timeout: {e}, {url}")
+        raise e
     except Exception as e:
         # Check if this is a proxy error
         is_proxy_err, reason = is_proxy_error(e)
