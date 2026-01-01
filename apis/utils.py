@@ -274,15 +274,6 @@ async def recreate_session_with_new_proxy(
     return page, context
 
 
-class ProxyError(Exception):
-    """Exception raised when a proxy error is detected."""
-    
-    def __init__(self, message: str, reason: str, original_error: Exception):
-        super().__init__(message)
-        self.reason = reason
-        self.original_error = original_error
-
-
 async def navigate_page(
     session: BrowserSession,
     url: str,
@@ -291,10 +282,6 @@ async def navigate_page(
 ) -> Response:
     """
     Navigate to a URL and update the session with response info.
-    
-    If a proxy error is detected (net::ERR_TUNNEL_CONNECTION_FAILED or 
-    NS_ERROR_PROXY_CONNECTION_REFUSED), it raises a ProxyError to signal
-    that the caller should retry with a new proxy.
 
     Args:
         session: The browser session
@@ -306,37 +293,21 @@ async def navigate_page(
         The response object
         
     Raises:
-        ProxyError: If a proxy-related error is detected
+        Any navigation errors are propagated to the caller for handling
     """
     logger.debug(f"Navigating to URL: {url}")
-    try:
-        response = await session.page.goto(
-            url,
-            timeout=timeout,
-            wait_until=wait_until,
-        )
-        assert response
+    response = await session.page.goto(
+        url,
+        timeout=timeout,
+        wait_until=wait_until,
+    )
+    assert response
 
-        session.response = response
-        session.response_headers = json.dumps(response.headers)
-        session.request_headers = json.dumps(response.request.headers)
+    session.response = response
+    session.response_headers = json.dumps(response.headers)
+    session.request_headers = json.dumps(response.request.headers)
 
-        return response
-    except PWTimeoutError as e:
-        # logger.warning(f"Page load timeout: {e}, {url}")
-        raise e
-    except Exception as e:
-        # Check if this is a proxy error
-        is_proxy_err, reason = is_proxy_error(e)
-        if is_proxy_err:
-            logger.warning(f"Proxy error detected: {e} (reason: {reason})")
-            raise ProxyError(
-                f"Proxy error during navigation: {e}",
-                reason=reason,
-                original_error=e,
-            )
-        # Re-raise non-proxy errors
-        raise
+    return response
 
 
 def _get_operation_status(status_code: Union[int, str]) -> str:
@@ -467,7 +438,7 @@ async def _handle_html_navigation(
         Tuple of (result, response_headers, request_headers)
         
     Raises:
-        ProxyError: If a proxy error is detected
+        Any navigation errors are propagated to the caller for handling
     """
     response = await navigate_page(
         bs,
@@ -579,7 +550,6 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
 
                 # Proxy retry loop
                 proxy_retry_count = 0
-                last_proxy_error: Optional[ProxyError] = None
                 
                 while proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
                     try:
@@ -588,46 +558,13 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                         )
                         response_body = result.html
                         break  # Success, exit retry loop
-                        
-                    except ProxyError as pe:
-                        proxy_retry_count += 1
-                        last_proxy_error = pe
-                        proxy_retry_total.labels(attempt=str(proxy_retry_count)).inc()
-                        
-                        logger.warning(
-                            f"Proxy error on attempt {proxy_retry_count}/{MAX_PROXY_RETRY_ATTEMPTS}: "
-                            f"{pe} for URL: {url_input.url}"
-                        )
-                        
-                        # Invalidate the current proxy
-                        await proxy_pool.invalidate_proxy(reason=pe.reason)
-                        
-                        if proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
-                            # Recreate session with new proxy
-                            page, context = await recreate_session_with_new_proxy(
-                                url_input, operation, None, page, context
-                            )
-                            bs = BrowserSession(
-                                page=page,
-                                context=context,
-                                response=None,
-                                start_time=start_time,
-                            )
-                            logger.info(
-                                f"Retrying with new proxy (attempt {proxy_retry_count + 1})"
-                            )
-                        else:
-                            # Max retries reached
-                            errors_total.labels(error_type="proxy_error").inc()
-                            result = HtmlResponse(
-                                html="",
-                                page_status_code=604,
-                                page_error=f"Proxy error after {MAX_PROXY_RETRY_ATTEMPTS} retries: {pe}",
-                            )
                             
                     except PWTimeoutError as e:
                         errors_total.labels(error_type="timeout").inc()
                         logger.warning(f"Page load timeout: {e}, {url_input.url}")
+                        
+                        # For timeout, also invalidate proxy (might be proxy issue)
+                        await proxy_pool.invalidate_proxy(reason="timeout")
                         await asyncio.sleep(0.5)
 
                         if url_input.is_force_get_content:
@@ -660,12 +597,14 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                                 page_status_code=601,
                                 page_error=f"page load timeout, {e}",
                             )
-                        break  # Exit retry loop on timeout
+                        break  # Exit retry loop on timeout (no retry for timeout)
 
                     except Exception as e:
-                        # Check if it's a proxy error that wasn't caught by navigate_page
+                        # Check if it's a proxy error
                         is_proxy_err, reason = is_proxy_error(e)
+                        
                         if is_proxy_err:
+                            # Proxy error: invalidate proxy and retry with new proxy
                             proxy_retry_count += 1
                             proxy_retry_total.labels(attempt=str(proxy_retry_count)).inc()
                             
@@ -677,6 +616,7 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                             await proxy_pool.invalidate_proxy(reason=reason)
                             
                             if proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
+                                # Recreate session with new proxy
                                 page, context = await recreate_session_with_new_proxy(
                                     url_input, operation, None, page, context
                                 )
@@ -698,12 +638,15 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                                     page_error=f"Proxy error after {MAX_PROXY_RETRY_ATTEMPTS} retries: {e}",
                                 )
                         else:
+                            # Non-proxy error: invalidate proxy cache (for next request) 
+                            # but don't retry since it's not a proxy issue
                             logger.error(f"Error occurred while loading page: {e}, {url_input.url}")
+                            await proxy_pool.invalidate_proxy(reason="browser_error")
                             errors_total.labels(error_type="browser_error").inc()
                             result = HtmlResponse(
                                 html="", page_status_code=602, page_error=f"page load failed, {e}"
                             )
-                        break  # Exit retry loop on non-proxy error
+                        break  # Exit retry loop
 
                 response_time = time.perf_counter() - start_time
 
@@ -757,7 +700,7 @@ async def _handle_screenshot_navigation(
         Tuple of (result, response_headers, request_headers)
         
     Raises:
-        ProxyError: If a proxy error is detected
+        Any navigation errors are propagated to the caller for handling
     """
     response = await navigate_page(
         bs,
@@ -871,47 +814,15 @@ async def get_html_screenshot(
                             bs, screenshot_input, browser_type, operation
                         )
                         break  # Success, exit retry loop
-                        
-                    except ProxyError as pe:
-                        proxy_retry_count += 1
-                        proxy_retry_total.labels(attempt=str(proxy_retry_count)).inc()
-                        
-                        logger.warning(
-                            f"Proxy error on attempt {proxy_retry_count}/{MAX_PROXY_RETRY_ATTEMPTS}: "
-                            f"{pe} for URL: {screenshot_input.url}"
-                        )
-                        
-                        # Invalidate the current proxy
-                        await proxy_pool.invalidate_proxy(reason=pe.reason)
-                        
-                        if proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
-                            # Recreate session with new proxy
-                            page, context = await recreate_session_with_new_proxy(
-                                screenshot_input, operation, viewport_size, page, context
-                            )
-                            bs = BrowserSession(
-                                page=page,
-                                context=context,
-                                response=None,
-                                start_time=start_time,
-                            )
-                            logger.info(
-                                f"Retrying with new proxy (attempt {proxy_retry_count + 1})"
-                            )
-                        else:
-                            # Max retries reached
-                            errors_total.labels(error_type="proxy_error").inc()
-                            result = ScreenshotResponse(
-                                screenshot="",
-                                page_status_code=604,
-                                page_error=f"Proxy error after {MAX_PROXY_RETRY_ATTEMPTS} retries: {pe}",
-                            )
                             
                     except PWTimeoutError as e:
                         errors_total.labels(error_type="timeout").inc()
                         logger.warning(
                             f"Page load timeout for screenshot: {e}, {screenshot_input.url}"
                         )
+                        
+                        # For timeout, also invalidate proxy (might be proxy issue)
+                        await proxy_pool.invalidate_proxy(reason="timeout")
 
                         if screenshot_input.is_force_get_content:
                             try:
@@ -943,12 +854,14 @@ async def get_html_screenshot(
                                 page_status_code=601,
                                 page_error=f"page load timeout, {e}",
                             )
-                        break  # Exit retry loop on timeout
+                        break  # Exit retry loop on timeout (no retry for timeout)
 
                     except Exception as e:
-                        # Check if it's a proxy error that wasn't caught by navigate_page
+                        # Check if it's a proxy error
                         is_proxy_err, reason = is_proxy_error(e)
+                        
                         if is_proxy_err:
+                            # Proxy error: invalidate proxy and retry with new proxy
                             proxy_retry_count += 1
                             proxy_retry_total.labels(attempt=str(proxy_retry_count)).inc()
                             
@@ -960,6 +873,7 @@ async def get_html_screenshot(
                             await proxy_pool.invalidate_proxy(reason=reason)
                             
                             if proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
+                                # Recreate session with new proxy
                                 page, context = await recreate_session_with_new_proxy(
                                     screenshot_input, operation, viewport_size, page, context
                                 )
@@ -981,17 +895,20 @@ async def get_html_screenshot(
                                     page_error=f"Proxy error after {MAX_PROXY_RETRY_ATTEMPTS} retries: {e}",
                                 )
                         else:
+                            # Non-proxy error: invalidate proxy cache (for next request)
+                            # but don't retry since it's not a proxy issue
                             logger.exception(e)
                             logger.error(
                                 f"Error occurred while loading page for screenshot: {e}, {screenshot_input.url}"
                             )
+                            await proxy_pool.invalidate_proxy(reason="browser_error")
                             errors_total.labels(error_type="browser_error").inc()
                             result = ScreenshotResponse(
                                 screenshot="",
                                 page_status_code=602,
                                 page_error=f"page load failed, {e}",
                             )
-                        break  # Exit retry loop on non-proxy error
+                        break  # Exit retry loop
 
                 response_time = time.perf_counter() - start_time
 
