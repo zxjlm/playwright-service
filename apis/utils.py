@@ -77,10 +77,10 @@ def _should_reinit_browser(exc: Exception) -> bool:
 async def _get_proxy_settings(force_refresh: bool = False) -> Optional[ProxySettings]:
     """
     Get proxy settings using the proxy pool (with reuse support).
-    
+
     Args:
         force_refresh: If True, force fetching a new proxy instead of reusing cached one
-        
+
     Returns:
         ProxySettings or None
     """
@@ -105,7 +105,9 @@ async def _create_browser_page(
     context: Optional[BrowserContext] = None
 
     for attempt in range(2):
-        browser_instance = await browser_manager.get_browser(browser_type, headless=True)
+        browser_instance = await browser_manager.get_browser(
+            browser_type, headless=True
+        )
         try:
             context = await browser_instance.create_context(proxy_item)
             page = await browser_instance.create_page(context)
@@ -133,7 +135,7 @@ async def _setup_page(
 ) -> None:
     """
     Set up page with viewport, encoding handler, and headers.
-    
+
     Args:
         page: The page to set up
         browser_input: Input parameters
@@ -230,17 +232,17 @@ async def recreate_session_with_new_proxy(
 ) -> tuple[Page, BrowserContext]:
     """
     Recreate browser session with a new proxy.
-    
+
     This function is used when a proxy error is detected and we need to
     switch to a new proxy. It closes the old page/context and creates new ones.
-    
+
     Args:
         browser_input: Input parameters
         operation: Operation type for logging
         viewport_size: Optional viewport size
         old_page: Previous page to close
         old_context: Previous context to close
-        
+
     Returns:
         Tuple of (new_page, new_context)
     """
@@ -255,22 +257,20 @@ async def recreate_session_with_new_proxy(
             await old_context.close()
         except Exception as e:
             logger.debug(f"Error closing old context: {e}")
-    
+
     # Get new proxy (force refresh)
     proxy_item = await _get_proxy_settings(force_refresh=True)
-    
+
     # Create new page and context
-    page, context = await _create_browser_page(
-        browser_input.browser_type, proxy_item
-    )
-    
+    page, context = await _create_browser_page(browser_input.browser_type, proxy_item)
+
     # Set up the new page
     await _setup_page(page, browser_input, viewport_size)
-    
+
     logger.info(
         f"Recreated {browser_input.browser_type} session with new proxy for {operation}"
     )
-    
+
     return page, context
 
 
@@ -291,7 +291,7 @@ async def navigate_page(
 
     Returns:
         The response object
-        
+
     Raises:
         Any navigation errors are propagated to the caller for handling
     """
@@ -302,6 +302,9 @@ async def navigate_page(
         wait_until=wait_until,
     )
     assert response
+
+    if response.status == 407:
+        raise Exception("Proxy authentication required")
 
     session.response = response
     session.response_headers = json.dumps(response.headers)
@@ -427,16 +430,16 @@ async def _handle_html_navigation(
 ) -> tuple[HtmlResponse, str, str]:
     """
     Handle the HTML navigation and content retrieval.
-    
+
     Args:
         bs: Browser session
         url_input: URL input parameters
         browser_type: Browser type
         operation: Operation type
-        
+
     Returns:
         Tuple of (result, response_headers, request_headers)
-        
+
     Raises:
         Any navigation errors are propagated to the caller for handling
     """
@@ -471,14 +474,14 @@ async def _handle_html_navigation(
         operation=operation,
         page_status_code=response.status,
     ).inc()
-    
+
     return result, response_headers, request_headers
 
 
 async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
     """
     Fetch HTML content from a URL using a browser.
-    
+
     Supports proxy retry: if a proxy error is detected (net::ERR_TUNNEL_CONNECTION_FAILED
     or NS_ERROR_PROXY_CONNECTION_REFUSED), the function will automatically switch to a
     new proxy and retry, up to MAX_PROXY_RETRY_ATTEMPTS times.
@@ -550,19 +553,21 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
 
                 # Proxy retry loop
                 proxy_retry_count = 0
-                
+
                 while proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
                     try:
-                        result, response_headers, request_headers = await _handle_html_navigation(
-                            bs, url_input, browser_type, operation
+                        result, response_headers, request_headers = (
+                            await _handle_html_navigation(
+                                bs, url_input, browser_type, operation
+                            )
                         )
                         response_body = result.html
                         break  # Success, exit retry loop
-                            
+
                     except PWTimeoutError as e:
                         errors_total.labels(error_type="timeout").inc()
                         logger.warning(f"Page load timeout: {e}, {url_input.url}")
-                        
+
                         # For timeout, also invalidate proxy (might be proxy issue)
                         await proxy_pool.invalidate_proxy(reason="timeout")
                         await asyncio.sleep(0.5)
@@ -602,19 +607,21 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                     except Exception as e:
                         # Check if it's a proxy error
                         is_proxy_err, reason = is_proxy_error(e)
-                        
+
                         if is_proxy_err:
                             # Proxy error: invalidate proxy and retry with new proxy
                             proxy_retry_count += 1
-                            proxy_retry_total.labels(attempt=str(proxy_retry_count)).inc()
-                            
+                            proxy_retry_total.labels(
+                                attempt=str(proxy_retry_count)
+                            ).inc()
+
                             logger.warning(
                                 f"Proxy error on attempt {proxy_retry_count}/{MAX_PROXY_RETRY_ATTEMPTS}: "
                                 f"{e} for URL: {url_input.url}"
                             )
-                            
+
                             await proxy_pool.invalidate_proxy(reason=reason)
-                            
+
                             if proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
                                 # Recreate session with new proxy
                                 page, context = await recreate_session_with_new_proxy(
@@ -638,13 +645,17 @@ async def get_html_base(url_input: UrlInput, session) -> HtmlResponse:
                                     page_error=f"Proxy error after {MAX_PROXY_RETRY_ATTEMPTS} retries: {e}",
                                 )
                         else:
-                            # Non-proxy error: invalidate proxy cache (for next request) 
+                            # Non-proxy error: invalidate proxy cache (for next request)
                             # but don't retry since it's not a proxy issue
-                            logger.error(f"Error occurred while loading page: {e}, {url_input.url}")
+                            logger.error(
+                                f"Error occurred while loading page: {e}, {url_input.url}"
+                            )
                             await proxy_pool.invalidate_proxy(reason="browser_error")
                             errors_total.labels(error_type="browser_error").inc()
                             result = HtmlResponse(
-                                html="", page_status_code=602, page_error=f"page load failed, {e}"
+                                html="",
+                                page_status_code=602,
+                                page_error=f"page load failed, {e}",
                             )
                         break  # Exit retry loop
 
@@ -689,16 +700,16 @@ async def _handle_screenshot_navigation(
 ) -> tuple[ScreenshotResponse, str, str]:
     """
     Handle the screenshot navigation and capture.
-    
+
     Args:
         bs: Browser session
         screenshot_input: Screenshot input parameters
         browser_type: Browser type
         operation: Operation type
-        
+
     Returns:
         Tuple of (result, response_headers, request_headers)
-        
+
     Raises:
         Any navigation errors are propagated to the caller for handling
     """
@@ -711,9 +722,7 @@ async def _handle_screenshot_navigation(
     response_headers = bs.response_headers
     request_headers = bs.request_headers
 
-    logger.debug(
-        f"Page loaded, waiting for screenshot: {screenshot_input.url}"
-    )
+    logger.debug(f"Page loaded, waiting for screenshot: {screenshot_input.url}")
     await asyncio.sleep(2)
 
     # Take screenshot
@@ -738,7 +747,7 @@ async def _handle_screenshot_navigation(
         operation=operation,
         page_status_code=response.status,
     ).inc()
-    
+
     return result, response_headers, request_headers
 
 
@@ -747,7 +756,7 @@ async def get_html_screenshot(
 ) -> ScreenshotResponse:
     """
     Take a screenshot of a URL using a browser.
-    
+
     Supports proxy retry: if a proxy error is detected (net::ERR_TUNNEL_CONNECTION_FAILED
     or NS_ERROR_PROXY_CONNECTION_REFUSED), the function will automatically switch to a
     new proxy and retry, up to MAX_PROXY_RETRY_ATTEMPTS times.
@@ -807,20 +816,22 @@ async def get_html_screenshot(
 
                 # Proxy retry loop
                 proxy_retry_count = 0
-                
+
                 while proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
                     try:
-                        result, response_headers, request_headers = await _handle_screenshot_navigation(
-                            bs, screenshot_input, browser_type, operation
+                        result, response_headers, request_headers = (
+                            await _handle_screenshot_navigation(
+                                bs, screenshot_input, browser_type, operation
+                            )
                         )
                         break  # Success, exit retry loop
-                            
+
                     except PWTimeoutError as e:
                         errors_total.labels(error_type="timeout").inc()
                         logger.warning(
                             f"Page load timeout for screenshot: {e}, {screenshot_input.url}"
                         )
-                        
+
                         # For timeout, also invalidate proxy (might be proxy issue)
                         await proxy_pool.invalidate_proxy(reason="timeout")
 
@@ -830,10 +841,12 @@ async def get_html_screenshot(
                                 screenshot_options = {}
                                 if screenshot_input.full_page:
                                     screenshot_options["full_page"] = True
-                                screenshot_bytes = await bs.page.screenshot(**screenshot_options)
-                                screenshot_base64 = base64.b64encode(screenshot_bytes).decode(
-                                    "utf-8"
+                                screenshot_bytes = await bs.page.screenshot(
+                                    **screenshot_options
                                 )
+                                screenshot_base64 = base64.b64encode(
+                                    screenshot_bytes
+                                ).decode("utf-8")
                                 result = ScreenshotResponse(
                                     screenshot=screenshot_base64,
                                     page_status_code=600,
@@ -859,23 +872,29 @@ async def get_html_screenshot(
                     except Exception as e:
                         # Check if it's a proxy error
                         is_proxy_err, reason = is_proxy_error(e)
-                        
+
                         if is_proxy_err:
                             # Proxy error: invalidate proxy and retry with new proxy
                             proxy_retry_count += 1
-                            proxy_retry_total.labels(attempt=str(proxy_retry_count)).inc()
-                            
+                            proxy_retry_total.labels(
+                                attempt=str(proxy_retry_count)
+                            ).inc()
+
                             logger.warning(
                                 f"Proxy error on attempt {proxy_retry_count}/{MAX_PROXY_RETRY_ATTEMPTS}: "
                                 f"{e} for URL: {screenshot_input.url}"
                             )
-                            
+
                             await proxy_pool.invalidate_proxy(reason=reason)
-                            
+
                             if proxy_retry_count < MAX_PROXY_RETRY_ATTEMPTS:
                                 # Recreate session with new proxy
                                 page, context = await recreate_session_with_new_proxy(
-                                    screenshot_input, operation, viewport_size, page, context
+                                    screenshot_input,
+                                    operation,
+                                    viewport_size,
+                                    page,
+                                    context,
                                 )
                                 bs = BrowserSession(
                                     page=page,

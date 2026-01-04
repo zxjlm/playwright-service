@@ -46,10 +46,10 @@ PROXY_ERROR_PATTERNS = [
 def is_proxy_error(error: Exception) -> tuple[bool, str]:
     """
     Check if an exception is a proxy-related error.
-    
+
     Args:
         error: The exception to check
-        
+
     Returns:
         Tuple of (is_proxy_error, error_reason)
     """
@@ -60,22 +60,23 @@ def is_proxy_error(error: Exception) -> tuple[bool, str]:
                 return True, "tunnel_failed"
             elif "REFUSED" in pattern or "refused" in pattern.lower():
                 return True, "connection_refused"
-            elif "Proxy" in error_str.upper():
-                return True, f"other proxy_error: {error_str}"
             else:
                 return True, "other"
+        elif "PROXY" in error_str.upper():
+            return True, f"other proxy_error: {error_str}"
+
     return False, ""
 
 
 @dataclass
 class CachedProxy:
     """Represents a cached proxy with usage statistics."""
-    
+
     server: str
     proxy_type: str
     reuse_count: int = 0
     created_at: float = field(default_factory=lambda: asyncio.get_event_loop().time())
-    
+
     def increment_reuse(self) -> int:
         """Increment and return the reuse count."""
         self.reuse_count += 1
@@ -184,15 +185,15 @@ class ProxyManager(BaseProxy):
 class ProxyPool:
     """
     Singleton proxy pool that manages proxy reuse.
-    
+
     This class caches the current proxy and tracks its usage statistics.
     When a proxy fails (detected by proxy errors), it invalidates the cache
     and fetches a new proxy.
     """
-    
+
     _instance: Optional["ProxyPool"] = None
     _lock = threading.Lock()
-    
+
     def __new__(cls) -> "ProxyPool":
         if cls._instance is None:
             with cls._lock:
@@ -200,7 +201,7 @@ class ProxyPool:
                     cls._instance = super().__new__(cls)
                     cls._instance._initialized = False
         return cls._instance
-    
+
     def __init__(self):
         if self._initialized:
             return
@@ -208,24 +209,25 @@ class ProxyPool:
         self._cached_proxy: Optional[CachedProxy] = None
         self._proxy_manager = ProxyManager()
         self._async_lock = asyncio.Lock()
-        
+
         # Import metrics here to avoid circular import
         from apis.metrics import (
             proxy_reuse_count,
             proxy_current_reuse_count,
             proxy_switch_total,
         )
+
         self._proxy_reuse_count = proxy_reuse_count
         self._proxy_current_reuse_count = proxy_current_reuse_count
         self._proxy_switch_total = proxy_switch_total
-    
+
     async def get_proxy(self, force_refresh: bool = False) -> Optional[str]:
         """
         Get a proxy, reusing the cached one if available.
-        
+
         Args:
             force_refresh: If True, force fetching a new proxy
-            
+
         Returns:
             Proxy server string or None
         """
@@ -239,15 +241,15 @@ class ProxyPool:
                     f"(reuse count: {reuse_count})"
                 )
                 return self._cached_proxy.server
-            
+
             # Need to get a new proxy
             if self._cached_proxy is not None:
                 # Record the reuse count before invalidating
                 self._record_proxy_reuse_stats()
-            
+
             # Fetch new proxy
             proxy = await self._proxy_manager.get_proxy()
-            
+
             if proxy:
                 self._cached_proxy = CachedProxy(
                     server=proxy,
@@ -259,15 +261,15 @@ class ProxyPool:
             else:
                 self._cached_proxy = None
                 self._proxy_current_reuse_count.set(0)
-            
+
             return proxy
-    
+
     async def invalidate_proxy(self, reason: str = "unknown") -> None:
         """
         Invalidate the current cached proxy.
-        
+
         Call this when a proxy error is detected to force fetching a new proxy.
-        
+
         Args:
             reason: The reason for invalidation (for metrics)
         """
@@ -283,7 +285,7 @@ class ProxyPool:
                 self._proxy_switch_total.labels(reason=reason).inc()
                 self._cached_proxy = None
                 self._proxy_current_reuse_count.set(0)
-    
+
     def _record_proxy_reuse_stats(self) -> None:
         """Record proxy reuse statistics to Prometheus."""
         if self._cached_proxy is not None and self._cached_proxy.reuse_count > 0:
@@ -294,14 +296,14 @@ class ProxyPool:
                 f"Proxy {self._cached_proxy.server} was reused "
                 f"{self._cached_proxy.reuse_count} times"
             )
-    
+
     @property
     def current_proxy(self) -> Optional[str]:
         """Get the current cached proxy server address."""
         if self._cached_proxy is not None:
             return self._cached_proxy.server
         return None
-    
+
     @property
     def current_reuse_count(self) -> int:
         """Get the current proxy's reuse count."""
