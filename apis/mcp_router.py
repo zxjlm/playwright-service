@@ -23,7 +23,7 @@ from schemas.service_schema import (
     MarkdownResponse,
 )
 from apis.deps import SessionDep
-from utils import clean_html_utils
+from utils.clean_utils import clean_html_utils
 
 mcp_router = APIRouter(prefix="/mcp", tags=["mcp"])
 

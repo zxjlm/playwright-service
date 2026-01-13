@@ -25,7 +25,7 @@ from schemas.service_schema import (
     UrlInput,
 )
 from browsers import browser_manager
-from utils import clean_html_utils
+from utils.clean_utils import clean_html_utils
 from apis.deps import SessionDep, verify_auth_key
 
 
