@@ -65,9 +65,7 @@ class TestUtilsFunctions:
         ):
 
             # Mock proxy pool
-            mock_proxy_pool.get_proxy = AsyncMock(
-                return_value="http://127.0.0.1:8080"
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -146,10 +144,14 @@ class TestUtilsFunctions:
             patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
+            patch(
+                "apis.utils.create_encoding_route_handler", new_callable=AsyncMock
+            ) as mock_encoding_handler,
         ):
 
             # Mock proxy pool
             mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
+            mock_proxy_pool.invalidate_proxy = AsyncMock()
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -162,6 +164,9 @@ class TestUtilsFunctions:
 
             # Mock timeout error
             mock_page.goto = AsyncMock(side_effect=PWTimeoutError("Timeout"))
+            mock_page.set_extra_http_headers = AsyncMock()
+            mock_page.wait_for_load_state = AsyncMock()
+            mock_page.content = AsyncMock(return_value="")
             mock_page.close = AsyncMock()
             mock_context.close = AsyncMock()
 
@@ -193,10 +198,14 @@ class TestUtilsFunctions:
             patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
+            patch(
+                "apis.utils.create_encoding_route_handler", new_callable=AsyncMock
+            ) as mock_encoding_handler,
         ):
 
             # Mock proxy pool
             mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
+            mock_proxy_pool.invalidate_proxy = AsyncMock()
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -208,10 +217,12 @@ class TestUtilsFunctions:
             mock_bm.get_browser = AsyncMock(return_value=mock_browser)
 
             # Mock timeout error, but forced content retrieval succeeds
+            force_content = "<html><body>" + "Force Content " * 1000 + "</body></html>"
             mock_page.goto = AsyncMock(side_effect=PWTimeoutError("Timeout"))
-            mock_page.content = AsyncMock(
-                return_value="<html><body>" + "Force Content " * 1000 + "</body></html>"
-            )
+            mock_page.set_extra_http_headers = AsyncMock()
+            # wait_for_load_state is called in force_get_content, it can timeout (that's OK)
+            mock_page.wait_for_load_state = AsyncMock(side_effect=Exception("Timeout"))
+            mock_page.content = AsyncMock(return_value=force_content)
             mock_page.close = AsyncMock()
             mock_context.close = AsyncMock()
 
@@ -246,9 +257,7 @@ class TestUtilsFunctions:
         ):
 
             # Mock proxy pool
-            mock_proxy_pool.get_proxy = AsyncMock(
-                return_value="http://127.0.0.1:8080"
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -358,9 +367,7 @@ class TestUtilsFunctions:
         ):
 
             # Mock proxy pool raising exception
-            mock_proxy_pool.get_proxy = AsyncMock(
-                side_effect=Exception("Proxy error")
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(side_effect=Exception("Proxy error"))
 
             # Mock semaphore
             mock_semaphore.__aenter__ = AsyncMock()

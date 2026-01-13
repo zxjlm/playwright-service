@@ -30,7 +30,7 @@ IS_ADVANCED_URLLIB3 = (
 )
 
 
-# Proxy error patterns for detection
+# Proxy error patterns for detection (in exception messages)
 # net::ERR_TUNNEL_CONNECTION_FAILED - Chromium error when proxy tunnel fails
 # NS_ERROR_PROXY_CONNECTION_REFUSED - Firefox error when proxy connection is refused
 PROXY_ERROR_PATTERNS = [
@@ -41,6 +41,54 @@ PROXY_ERROR_PATTERNS = [
     "Proxy connection refused",
     "Could not connect to proxy",
 ]
+
+# Proxy error page content patterns for detection (in page content)
+# These patterns indicate that the proxy returned an error page instead of the target content
+# ErrorCode:631 - Common tunnel proxy error (auth failure, connection issue, etc.)
+PROXY_ERROR_PAGE_PATTERNS = [
+    "ErrorCode:631",  # Tunnel proxy error
+    "ErrorCode:632",  # Tunnel proxy timeout
+    "ErrorCode:633",  # Tunnel proxy connection refused
+    "ErrorCode:634",  # Tunnel proxy auth failure
+    "ErrorCode:635",  # Tunnel proxy unavailable
+    "Proxy Error",    # Generic proxy error page
+    "代理错误",        # Chinese proxy error
+    "隧道连接失败",    # Tunnel connection failed in Chinese
+]
+
+
+class ProxyPageError(Exception):
+    """Exception raised when proxy returns an error page instead of target content."""
+
+    def __init__(self, error_code: str, message: str = ""):
+        self.error_code = error_code
+        self.message = message or f"Proxy returned error page: {error_code}"
+        super().__init__(self.message)
+
+
+def is_proxy_error_page(page_content: str) -> tuple[bool, str]:
+    """
+    Check if the page content indicates a proxy error page.
+
+    This detects the case where the proxy returns a "successful" HTTP response
+    but the actual page content is an error page from the proxy service.
+
+    Args:
+        page_content: The HTML content of the page
+
+    Returns:
+        Tuple of (is_proxy_error_page, detected_pattern)
+    """
+    if not page_content:
+        return False, ""
+
+    # Check for proxy error patterns in page content
+    for pattern in PROXY_ERROR_PAGE_PATTERNS:
+        if pattern in page_content:
+            logger.warning(f"Detected proxy error page pattern: {pattern}")
+            return True, pattern
+
+    return False, ""
 
 
 def is_proxy_error(error: Exception) -> tuple[bool, str]:
@@ -310,6 +358,23 @@ class ProxyPool:
         if self._cached_proxy is not None:
             return self._cached_proxy.reuse_count
         return 0
+
+    async def shutdown(self) -> None:
+        """
+        Shutdown the proxy pool and record final statistics.
+
+        Call this during application shutdown to ensure the current proxy's
+        reuse statistics are recorded to Prometheus before the service exits.
+        """
+        async with self._async_lock:
+            if self._cached_proxy is not None:
+                logger.info(
+                    f"Recording final proxy stats on shutdown: {self._cached_proxy.server} "
+                    f"(reuse count: {self._cached_proxy.reuse_count})"
+                )
+                self._record_proxy_reuse_stats()
+                self._cached_proxy = None
+                self._proxy_current_reuse_count.set(0)
 
 
 # Global singleton instance

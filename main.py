@@ -7,6 +7,7 @@ from prometheus_client import make_asgi_app
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from browsers import browser_manager
+from base_proxy import proxy_pool
 from apis.service_router import service_router
 from apis.mcp_router import mcp_router
 from apis.metrics import (
@@ -16,6 +17,15 @@ from apis.metrics import (
     http_response_size_bytes,
     http_requests_in_flight,
 )
+from sentry_sdk import init
+
+from config import service_config
+
+
+if service_config.otlp_endpoint:
+    from utils.loggers import setup_otlp_logger
+
+    setup_otlp_logger(service_config.otlp_endpoint, "playwright-service", "production")
 
 
 @asynccontextmanager
@@ -23,6 +33,8 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Application shutdown event triggered")
+    # Record proxy reuse stats before shutdown
+    await proxy_pool.shutdown()
     await shutdown_browsers()
 
 
@@ -125,6 +137,13 @@ app.include_router(service_router)
 mcp.mount_http(mcp_router)
 
 mcp.setup_server()
+
+if service_config.sentry_dsn:
+    init(
+        dsn=service_config.sentry_dsn,
+        environment="production",
+        enable_tracing=True,
+    )
 
 # async def create_context(
 #     browser: Browser, proxy: ProxySettings | None = None

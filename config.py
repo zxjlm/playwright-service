@@ -42,6 +42,9 @@ class ServiceConfig(BaseSettings):
 
     auth_config: int = Field(default=0)
 
+    sentry_dsn: str | None = Field(default=None)
+    otlp_endpoint: str | None = Field(default=None)
+
     model_config = SettingsConfigDict(case_sensitive=False, env_prefix="service_")
 
     @model_validator(mode="after")

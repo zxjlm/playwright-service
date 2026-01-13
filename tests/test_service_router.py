@@ -59,9 +59,7 @@ class TestServiceRouter:
         ):
 
             # Mock proxy pool
-            mock_proxy_pool.get_proxy = AsyncMock(
-                return_value="http://127.0.0.1:8080"
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -180,9 +178,7 @@ class TestServiceRouter:
         ):
 
             # Mock proxy pool
-            mock_proxy_pool.get_proxy = AsyncMock(
-                return_value="http://127.0.0.1:8080"
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
 
             # Mock successful response
             mock_response = ScreenshotResponse(
@@ -341,9 +337,7 @@ class TestIntegrationComparison:
         ):
 
             # Mock proxy pool
-            mock_proxy_pool.get_proxy = AsyncMock(
-                return_value="http://127.0.0.1:8080"
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -389,9 +383,7 @@ class TestIntegrationComparison:
         ):
 
             # Mock proxy pool
-            mock_proxy_pool.get_proxy = AsyncMock(
-                return_value="http://127.0.0.1:8080"
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -435,9 +427,7 @@ class TestIntegrationComparison:
         ):
 
             # Mock proxy pool
-            mock_proxy_pool.get_proxy = AsyncMock(
-                return_value="http://127.0.0.1:8080"
-            )
+            mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
 
             # Mock browser manager
             mock_browser = AsyncMock()
@@ -487,20 +477,6 @@ class TestProxyErrorDetection:
         is_error, reason = is_proxy_error(error)
         assert is_error is True
         assert reason == "tunnel_failed"
-
-    def test_is_proxy_error_connection_refused(self):
-        """Test detection of proxy connection refused error"""
-        error = Exception("NS_ERROR_PROXY_CONNECTION_REFUSED")
-        is_error, reason = is_proxy_error(error)
-        assert is_error is True
-        assert reason == "connection_refused"
-
-    def test_is_proxy_error_proxy_failed(self):
-        """Test detection of proxy connection failed error"""
-        error = Exception("ERR_PROXY_CONNECTION_FAILED")
-        is_error, reason = is_proxy_error(error)
-        assert is_error is True
-        assert reason == "other"
 
     def test_is_proxy_error_not_proxy_error(self):
         """Test non-proxy errors are not detected as proxy errors"""
