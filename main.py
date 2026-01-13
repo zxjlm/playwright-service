@@ -20,6 +20,7 @@ from apis.metrics import (
 from sentry_sdk import init
 
 from config import service_config
+from utils.middleware import RequestLoggingMiddleware
 
 
 if service_config.otlp_endpoint:
@@ -118,6 +119,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
 
 # 添加 Prometheus 中间件
 app.add_middleware(PrometheusMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 # 使用 Prometheus 官方提供的 ASGI 应用挂载 /metrics
 metrics_app = make_asgi_app()

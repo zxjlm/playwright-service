@@ -4,7 +4,7 @@
 Unit tests for HTML cleaning functionality
 """
 
-from utils import clean_html_utils
+from utils.clean_utils import clean_html_utils
 
 
 class TestCleanHtmlUtils:
