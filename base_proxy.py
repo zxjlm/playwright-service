@@ -20,6 +20,8 @@ from typing import Optional
 import httpx
 from loguru import logger
 import urllib3
+from utils.html_utils import count_leaf_nodes
+from justhtml import JustHTML
 
 from config import service_config
 
@@ -51,9 +53,9 @@ PROXY_ERROR_PAGE_PATTERNS = [
     "ErrorCode:633",  # Tunnel proxy connection refused
     "ErrorCode:634",  # Tunnel proxy auth failure
     "ErrorCode:635",  # Tunnel proxy unavailable
-    "Proxy Error",    # Generic proxy error page
-    "代理错误",        # Chinese proxy error
-    "隧道连接失败",    # Tunnel connection failed in Chinese
+    "Proxy Error",  # Generic proxy error page
+    "代理错误",  # Chinese proxy error
+    "隧道连接失败",  # Tunnel connection failed in Chinese
 ]
 
 
@@ -81,6 +83,13 @@ def is_proxy_error_page(page_content: str) -> tuple[bool, str]:
     """
     if not page_content:
         return False, ""
+
+    # Check for leaf nodes too few.
+    doc = JustHTML(page_content)
+    leaf_nodes = count_leaf_nodes(doc)
+    if leaf_nodes < 32:
+        logger.warning(f"Leaf nodes too few: {leaf_nodes}")
+        return True, "leaf_nodes_too_few"
 
     # Check for proxy error patterns in page content
     for pattern in PROXY_ERROR_PAGE_PATTERNS:
