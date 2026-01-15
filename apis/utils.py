@@ -359,6 +359,59 @@ async def navigate_page(
     return response
 
 
+async def _handle_proxy_page_error(
+    ctx: ProxyRetryContext,
+    proxy_e: ProxyPageError,
+    browser_input: BaseBrowserInput,
+    operation: str,
+    viewport_size: Optional[dict],
+    start_time: float,
+    create_error_response: Callable[[int, str], TResponse],
+    context_message: str = "",
+) -> Optional[TResponse]:
+    """
+    Handle ProxyPageError with unified retry logic.
+
+    Args:
+        ctx: Proxy retry context
+        proxy_e: The ProxyPageError exception
+        browser_input: Input parameters
+        operation: Operation type
+        viewport_size: Optional viewport size
+        start_time: Operation start time
+        create_error_response: Function to create error response
+        context_message: Optional context message for logging (e.g., "in timeout handler")
+
+    Returns:
+        None if should continue retry, or error response if max retries reached
+    """
+    ctx.retry_count += 1
+    proxy_retry_total.labels(attempt=str(ctx.retry_count)).inc()
+
+    log_context = f" {context_message}" if context_message else ""
+    logger.warning(
+        f"Proxy page error{log_context} on attempt {ctx.retry_count}/{MAX_PROXY_RETRY_ATTEMPTS}: "
+        f"{proxy_e.error_code} for URL: {browser_input.url}"
+    )
+
+    await proxy_pool.invalidate_proxy(reason=f"page_error_{proxy_e.error_code}")
+
+    if ctx.retry_count < MAX_PROXY_RETRY_ATTEMPTS:
+        await ctx.recreate_with_new_proxy(
+            browser_input, operation, viewport_size, start_time
+        )
+        logger.info(
+            f"Retrying with new proxy after page error{log_context} (attempt {ctx.retry_count + 1})"
+        )
+        return None  # Indicate to continue retry
+    else:
+        errors_total.labels(error_type="proxy_page_error").inc()
+        return create_error_response(
+            605,
+            f"Proxy page error after {MAX_PROXY_RETRY_ATTEMPTS} retries: {proxy_e.error_code}",
+        )
+
+
 async def execute_with_proxy_retry(
     ctx: ProxyRetryContext,
     browser_input: BaseBrowserInput,
@@ -387,6 +440,10 @@ async def execute_with_proxy_retry(
         Tuple of (result, response_time)
     """
     start_time = ctx.session.start_time
+
+    # ATTENTION: the result is not only get from the navigation_handler,
+    # it can also get from the timeout_handler or the proxy_page_error handler.
+    # So if you want validate the result, you need to check all of the three handlers.
     result: Optional[TResponse] = None
 
     while ctx.retry_count < MAX_PROXY_RETRY_ATTEMPTS:
@@ -402,36 +459,43 @@ async def execute_with_proxy_retry(
             await proxy_pool.invalidate_proxy(reason="timeout")
 
             # Use operation-specific timeout handler
-            result = await timeout_handler(ctx.session, e)
-            break  # Exit retry loop on timeout (no retry for timeout)
+            # If timeout_handler detects proxy error page, it will raise ProxyPageError
+            # which should trigger retry logic
+            try:
+                result = await timeout_handler(ctx.session, e)
+                break  # Exit retry loop on timeout (no retry for timeout)
+            except ProxyPageError as proxy_e:
+                # Proxy error page detected in timeout handler, handle as ProxyPageError
+                result = await _handle_proxy_page_error(
+                    ctx,
+                    proxy_e,
+                    browser_input,
+                    operation,
+                    viewport_size,
+                    start_time,
+                    create_error_response,
+                    "detected in timeout handler",
+                )
+                if result is None:
+                    continue  # Continue retry
+                else:
+                    break  # Max retries reached
 
         except ProxyPageError as e:
             # Proxy returned an error page (e.g., ErrorCode:631)
-            ctx.retry_count += 1
-            proxy_retry_total.labels(attempt=str(ctx.retry_count)).inc()
-
-            logger.warning(
-                f"Proxy page error on attempt {ctx.retry_count}/{MAX_PROXY_RETRY_ATTEMPTS}: "
-                f"{e.error_code} for URL: {browser_input.url}"
+            result = await _handle_proxy_page_error(
+                ctx,
+                e,
+                browser_input,
+                operation,
+                viewport_size,
+                start_time,
+                create_error_response,
             )
-
-            await proxy_pool.invalidate_proxy(reason=f"page_error_{e.error_code}")
-
-            if ctx.retry_count < MAX_PROXY_RETRY_ATTEMPTS:
-                await ctx.recreate_with_new_proxy(
-                    browser_input, operation, viewport_size, start_time
-                )
-                logger.info(
-                    f"Retrying with new proxy after page error (attempt {ctx.retry_count + 1})"
-                )
-                continue
+            if result is None:
+                continue  # Continue retry
             else:
-                errors_total.labels(error_type="proxy_page_error").inc()
-                result = create_error_response(
-                    605,
-                    f"Proxy page error after {MAX_PROXY_RETRY_ATTEMPTS} retries: {e.error_code}",
-                )
-                break
+                break  # Max retries reached
 
         except Exception as e:
             # Check if it's a proxy error
@@ -668,6 +732,16 @@ async def _html_timeout_handler(
         try:
             html_content, last_error = await force_get_content(bs.page, url_input.url)
             if html_content and len(html_content) > 5000:
+                # Check for proxy error page before returning
+                is_proxy_err_page, detected_pattern = is_proxy_error_page(html_content)
+                if is_proxy_err_page:
+                    logger.warning(
+                        f"Detected proxy error page ({detected_pattern}) in timeout handler for URL: {url_input.url}"
+                    )
+                    raise ProxyPageError(
+                        error_code=detected_pattern,
+                        message=f"Proxy returned error page ({detected_pattern}) instead of target content",
+                    )
                 return HtmlResponse(
                     html=html_content,
                     page_status_code=600 if not last_error else 601,
@@ -677,6 +751,9 @@ async def _html_timeout_handler(
                         else f"page load failed while force read content, {last_error}"
                     ),
                 )
+        except ProxyPageError:
+            # Re-raise ProxyPageError to be handled by retry logic
+            raise
         except Exception as force_e:
             logger.warning(
                 f"Error occurred while force read content: {force_e}, {url_input.url}"

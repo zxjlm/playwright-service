@@ -26,6 +26,8 @@ from justhtml import JustHTML
 from config import service_config
 
 
+NO_LEAF_NODES_THRESHOLD = 32
+
 # Available proxy types
 IS_ADVANCED_URLLIB3 = (
     int(urllib3.__version__.split(".")[1]) >= 26 or int(urllib3.__version__.split(".")[0]) >= 2  # type: ignore
@@ -87,7 +89,7 @@ def is_proxy_error_page(page_content: str) -> tuple[bool, str]:
     # Check for leaf nodes too few.
     doc = JustHTML(page_content)
     leaf_nodes = count_leaf_nodes(doc)
-    if leaf_nodes < 32:
+    if leaf_nodes < NO_LEAF_NODES_THRESHOLD:
         logger.warning(f"Leaf nodes too few: {leaf_nodes}")
         return True, "leaf_nodes_too_few"
 

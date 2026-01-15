@@ -62,10 +62,14 @@ class TestUtilsFunctions:
             patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
+            patch("apis.utils.is_proxy_error_page") as mock_is_proxy_error_page,
         ):
 
             # Mock proxy pool
             mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
+
+            # Mock is_proxy_error_page to return False (not a proxy error page)
+            mock_is_proxy_error_page.return_value = (False, "")
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -201,11 +205,15 @@ class TestUtilsFunctions:
             patch(
                 "apis.utils.create_encoding_route_handler", new_callable=AsyncMock
             ) as mock_encoding_handler,
+            patch("apis.utils.is_proxy_error_page") as mock_is_proxy_error_page,
         ):
 
             # Mock proxy pool
             mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
             mock_proxy_pool.invalidate_proxy = AsyncMock()
+
+            # Mock is_proxy_error_page to return False (not a proxy error page)
+            mock_is_proxy_error_page.return_value = (False, "")
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -254,10 +262,14 @@ class TestUtilsFunctions:
             patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
+            patch("apis.utils.is_proxy_error_page") as mock_is_proxy_error_page,
         ):
 
             # Mock proxy pool
             mock_proxy_pool.get_proxy = AsyncMock(return_value="http://127.0.0.1:8080")
+
+            # Mock is_proxy_error_page to return False (not a proxy error page)
+            mock_is_proxy_error_page.return_value = (False, "")
 
             # Mock browser
             mock_browser = AsyncMock()
@@ -311,10 +323,14 @@ class TestUtilsFunctions:
             patch("apis.utils.proxy_pool") as mock_proxy_pool,
             patch("apis.utils.browser_manager") as mock_bm,
             patch("apis.utils.RequestHistoryModel") as mock_model,
+            patch("apis.utils.is_proxy_error_page") as mock_is_proxy_error_page,
         ):
 
             # Mock proxy pool
             mock_proxy_pool.get_proxy = AsyncMock(return_value=None)
+
+            # Mock is_proxy_error_page to return False (not a proxy error page)
+            mock_is_proxy_error_page.return_value = (False, "")
 
             # Mock browser
             mock_browser = AsyncMock()
