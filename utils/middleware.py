@@ -68,12 +68,17 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         start_time = time.perf_counter()
 
-        # get url
-        url = str(request.url)
+        # get url path and normalize it (remove trailing slash)
+        path = request.url.path.rstrip("/")
+        if not path:  # handle root path "/"
+            path = "/"
 
-        for endpoint in self._filter_endpoints:
-            if url.endswith(endpoint):
-                return await call_next(request)
+        # check if normalized path matches any filtered endpoint exactly
+        if path in self._filter_endpoints:
+            return await call_next(request)
+
+        # get full url for logging
+        url = str(request.url)
 
         # get and truncate headers
         headers = dict(request.headers)
