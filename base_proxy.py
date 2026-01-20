@@ -88,10 +88,16 @@ def is_proxy_error_page(page_content: str) -> tuple[bool, str]:
 
     # Check for leaf nodes too few.
     doc = JustHTML(page_content)
-    leaf_nodes = count_leaf_nodes(doc)
-    if leaf_nodes < NO_LEAF_NODES_THRESHOLD:
-        logger.warning(f"Leaf nodes too few: {leaf_nodes}")
-        return True, "leaf_nodes_too_few"
+    if doc.to_text() and len(doc.to_text()) < 8:
+        logger.warning(
+            f"Page content too short: {len(doc.to_text())}, content: {doc.to_text()}"
+        )
+        return True, "page_content_too_short"
+
+    # leaf_nodes = count_leaf_nodes(doc)
+    # if leaf_nodes < NO_LEAF_NODES_THRESHOLD:
+    #     logger.warning(f"Leaf nodes too few: {leaf_nodes}")
+    #     return True, "leaf_nodes_too_few"
 
     # Check for proxy error patterns in page content
     for pattern in PROXY_ERROR_PAGE_PATTERNS:
