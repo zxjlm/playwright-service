@@ -455,8 +455,8 @@ async def execute_with_proxy_retry(
             errors_total.labels(error_type="timeout").inc()
             logger.warning(f"Page load timeout: {e}, {browser_input.url}")
 
-            # For timeout, also invalidate proxy (might be proxy issue)
-            await proxy_pool.invalidate_proxy(reason="timeout")
+            # Just Timeout not need to invalidate proxy, the timeout handler will handle it
+            # await proxy_pool.invalidate_proxy(reason="timeout")
 
             # Use operation-specific timeout handler
             # If timeout_handler detects proxy error page, it will raise ProxyPageError
