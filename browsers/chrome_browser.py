@@ -20,6 +20,7 @@ from patchright.async_api import (
 )
 
 from .base_browser import BaseBrowser
+from .browser_scripts import BrowserScriptConfig
 
 
 class ChromeBrowser(BaseBrowser):
@@ -138,64 +139,16 @@ class ChromeBrowser(BaseBrowser):
             extra_http_headers=merged_headers,
         )
 
-        # Add anti-detection scripts for WAF bypass
+        # Add comprehensive browser enhancement scripts
         if enable_waf_bypass:
-            await context.add_init_script("""
-                // Hide webdriver property
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => undefined
-                });
-                
-                // Override chrome object
-                window.chrome = {
-                    runtime: {},
-                    loadTimes: function() {},
-                    csi: function() {},
-                    app: {}
-                };
-                
-                // Override plugins
-                Object.defineProperty(navigator, 'plugins', {
-                    get: () => [1, 2, 3, 4, 5]
-                });
-                
-                // Override languages
-                Object.defineProperty(navigator, 'languages', {
-                    get: () => ['zh-CN', 'zh', 'en-US', 'en']
-                });
-                
-                // Override permissions API
-                const originalQuery = window.navigator.permissions.query;
-                window.navigator.permissions.query = (parameters) => (
-                    parameters.name === 'notifications' ?
-                        Promise.resolve({ state: Notification.permission }) :
-                        originalQuery(parameters)
-                );
-                
-                // Override webdriver property (additional protection)
-                Object.defineProperty(navigator, 'webdriver', {
-                    get: () => false
-                });
-                
-                // Add realistic browser features
-                Object.defineProperty(navigator, 'hardwareConcurrency', {
-                    get: () => 8
-                });
-                
-                Object.defineProperty(navigator, 'deviceMemory', {
-                    get: () => 8
-                });
-                
-                // Override getBattery if available
-                if (navigator.getBattery) {
-                    navigator.getBattery = () => Promise.resolve({
-                        charging: true,
-                        chargingTime: 0,
-                        dischargingTime: Infinity,
-                        level: 1
-                    });
-                }
-            """)
+            # Use the enhanced script configuration which includes:
+            # - Anti-detection measures
+            # - DOM monitoring hooks
+            # - Resource loading detection
+            # - Interaction element detection
+            # - Performance monitoring utilities
+            init_script = BrowserScriptConfig.get_init_script()
+            await context.add_init_script(init_script)
 
         # Block media files to improve performance (optional, can be disabled if needed)
         await context.route(

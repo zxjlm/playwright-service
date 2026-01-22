@@ -11,6 +11,7 @@ from browsers import browser_manager
 from base_proxy import proxy_pool
 from apis.service_router import service_router
 from apis.mcp_router import mcp_router
+from apis.enhanced_router import router as enhanced_router
 from apis.metrics import (
     http_requests_total,
     http_request_duration_seconds,
@@ -144,6 +145,7 @@ app.mount("/metrics", metrics_app)
 
 app.include_router(service_router)
 app.include_router(mcp_router)
+# app.include_router(enhanced_router)
 
 if service_config.sentry_dsn:
     init(

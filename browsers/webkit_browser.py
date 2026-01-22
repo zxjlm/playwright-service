@@ -20,6 +20,7 @@ from patchright.async_api import (
 )
 
 from .base_browser import BaseBrowser
+from .browser_scripts import BrowserScriptConfig
 
 
 class WebKitBrowser(BaseBrowser):
@@ -65,6 +66,7 @@ class WebKitBrowser(BaseBrowser):
         locale: Optional[str] = None,
         timezone_id: Optional[str] = None,
         geolocation: Optional[dict] = None,
+        enable_waf_bypass: bool = True,
     ) -> BrowserContext:
         """Create WebKit browser context
 
@@ -75,6 +77,7 @@ class WebKitBrowser(BaseBrowser):
             locale: Locale for the context, e.g. "zh-CN"
             timezone_id: Timezone ID, e.g. "Asia/Shanghai"
             geolocation: Geolocation, e.g. {"latitude": 31.2, "longitude": 121.5}
+            enable_waf_bypass: Enable WAF bypass features (default: True)
         """
         if not self.browser:
             raise RuntimeError("Browser not initialized")
@@ -88,6 +91,17 @@ class WebKitBrowser(BaseBrowser):
             timezone_id=timezone_id,
             geolocation=geolocation,
         )
+
+        # Add comprehensive browser enhancement scripts
+        if enable_waf_bypass:
+            # Use the enhanced script configuration which includes:
+            # - Anti-detection measures
+            # - DOM monitoring hooks
+            # - Resource loading detection
+            # - Interaction element detection
+            # - Performance monitoring utilities
+            init_script = BrowserScriptConfig.get_init_script()
+            await context.add_init_script(init_script)
 
         # Block media files to improve performance
         await context.route(
