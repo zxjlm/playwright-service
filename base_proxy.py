@@ -44,6 +44,7 @@ PROXY_ERROR_PATTERNS = [
     "ERR_PROXY_CONNECTION_FAILED",
     "Proxy connection refused",
     "Could not connect to proxy",
+    "ERR_CONNECTION_CLOSED",
 ]
 
 # Proxy error page content patterns for detection (in page content)
