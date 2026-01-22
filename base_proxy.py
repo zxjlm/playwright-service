@@ -56,6 +56,7 @@ PROXY_ERROR_PAGE_PATTERNS = [
     "ErrorCode:633",  # Tunnel proxy connection refused
     "ErrorCode:634",  # Tunnel proxy auth failure
     "ErrorCode:635",  # Tunnel proxy unavailable
+    "ErrorCode:900",  # Unexcept Error
     "Proxy Error",  # Generic proxy error page
     "代理错误",  # Chinese proxy error
     "隧道连接失败",  # Tunnel connection failed in Chinese
