@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 import time
 from fastapi import FastAPI, Request
-from fastapi_mcp import FastApiMCP
+from fastmcp import FastMCP
+from fastmcp.utilities.lifespan import combine_lifespans
 from loguru import logger
 from prometheus_client import make_asgi_app
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -46,7 +47,22 @@ async def shutdown_browsers():
     logger.info("Browsers shutdown completed")
 
 
-app = FastAPI(lifespan=lifespan)
+# Build a minimal FastAPI app with mcp_router for FastMCP.from_fastapi (OpenAPI source only)
+_temp_app = FastAPI()
+_temp_app.include_router(mcp_router)
+
+# Generate MCP server from FastAPI (only endpoints with tag "mcp")
+mcp = FastMCP.from_fastapi(
+    app=_temp_app,
+    name="Playwright MCP Service",
+    tags={"mcp"},
+)
+mcp_app = mcp.http_app(path="/mcp")
+
+# Combine app lifespan with MCP lifespan (enter in order, exit in reverse)
+combined_lifespan = combine_lifespans(lifespan, mcp_app.lifespan)
+
+app = FastAPI(lifespan=combined_lifespan, routes=list(mcp_app.routes))
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
@@ -126,19 +142,8 @@ metrics_app = make_asgi_app()
 app.mount("/metrics", metrics_app)
 
 
-mcp = FastApiMCP(
-    app,
-    include_tags=["mcp"],
-    # auth_config=AuthConfig(
-    #     dependencies=[Depends(token_auth_scheme)],
-    # ),
-)
-
 app.include_router(service_router)
-
-mcp.mount_http(mcp_router)
-
-mcp.setup_server()
+app.include_router(mcp_router)
 
 if service_config.sentry_dsn:
     init(
