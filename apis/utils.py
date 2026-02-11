@@ -82,8 +82,11 @@ class BrowserSession:
 def _should_reinit_browser(exc: Exception) -> bool:
     """Detect browser/context closed errors that require reinit."""
     message = str(exc)
-    return "has been closed" in message or "browser has been closed" in message
-
+    return (
+        "has been closed" in message
+        or "browser has been closed" in message
+        or "the handler is closed" in message
+    )
 
 async def _get_proxy_settings(force_refresh: bool = False) -> Optional[ProxySettings]:
     """
